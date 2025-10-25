@@ -1,129 +1,75 @@
-// components/ui/StepIndicator.tsx
-import { LucideIcon, CheckCircle } from 'lucide-react';
-
-interface Step {
-  number: number;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  status: 'completed' | 'current' | 'upcoming';
-}
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { Check } from 'lucide-react';
 
 interface StepIndicatorProps {
-  steps: Step[];
-  title?: string;
-  vertical?: boolean;
+  steps: {
+    id: string;
+    label: string;
+    description?: string;
+  }[];
+  currentStep: string;
   className?: string;
 }
 
-export function StepIndicator({ 
-  steps, 
-  title = "Setup Steps", 
-  vertical = true,
-  className = '' 
-}: StepIndicatorProps) {
-  if (vertical) {
-    return (
-      <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
-        <h2 className="text-lg font-semibold text-gray-900 mb-6">{title}</h2>
-        
-        <div className="space-y-6">
-          {steps.map((step, index) => {
-            const Icon = step.icon;
-            return (
-              <div key={step.number} className="flex items-start space-x-4 relative">
-                {/* Step Number */}
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step.status === 'completed' 
-                    ? 'bg-green-500 text-white'
-                    : step.status === 'current'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {step.status === 'completed' ? (
-                    <CheckCircle size={16} />
-                  ) : (
-                    step.number
-                  )}
-                </div>
+export function StepIndicator({ steps, currentStep, className }: StepIndicatorProps) {
+  const currentIndex = steps.findIndex(step => step.id === currentStep);
 
-                {/* Step Content */}
-                <div className="flex-1 min-w-0">
-                  <p className={`text-sm font-medium ${
-                    step.status === 'completed' 
-                      ? 'text-green-700'
-                      : step.status === 'current'
-                      ? 'text-blue-700'
-                      : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </p>
-                  <p className="text-sm text-gray-500 mt-1">
-                    {step.description}
-                  </p>
-                </div>
-
-                {/* Connecting Line */}
-                {index < steps.length - 1 && (
-                  <div className={`absolute left-4 top-8 w-0.5 h-10 ${
-                    step.status === 'completed' ? 'bg-green-500' : 'bg-gray-200'
-                  }`} style={{ marginTop: '2rem' }} />
-                )}
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
-
-  // Horizontal Layout
   return (
-    <div className={`bg-white border border-gray-200 rounded-lg p-6 ${className}`}>
-      <h2 className="text-lg font-semibold text-gray-900 mb-6">{title}</h2>
-      
-      <nav aria-label="Progress">
-        <ol className="flex items-center">
-          {steps.map((step, stepIdx) => (
-            <li key={step.number} className={`relative ${stepIdx !== steps.length - 1 ? 'pr-8 sm:pr-20' : ''} flex-1`}>
-              <div className="flex items-center">
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium ${
-                  step.status === 'completed' 
-                    ? 'bg-green-500 text-white'
-                    : step.status === 'current'
-                    ? 'bg-blue-500 text-white'
-                    : 'bg-gray-100 text-gray-500'
-                }`}>
-                  {step.status === 'completed' ? (
-                    <CheckCircle size={16} />
+    <div className={cn('w-full', className)}>
+      <div className="flex items-center justify-between">
+        {steps.map((step, index) => {
+          const isCompleted = index < currentIndex;
+          const isCurrent = index === currentIndex;
+          const isUpcoming = index > currentIndex;
+
+          return (
+            <React.Fragment key={step.id}>
+              <div className="flex flex-col items-center">
+                <div
+                  className={cn(
+                    'flex items-center justify-center w-8 h-8 rounded-full border-2 font-medium text-sm transition-colors',
+                    isCompleted && 'bg-blue-600 border-blue-600 text-white',
+                    isCurrent && 'border-blue-600 text-blue-600',
+                    isUpcoming && 'border-slate-300 text-slate-400'
+                  )}
+                >
+                  {isCompleted ? (
+                    <Check className="w-4 h-4" />
                   ) : (
-                    step.number
+                    index + 1
                   )}
                 </div>
-                
-                <div className="ml-4 min-w-0">
-                  <p className={`text-sm font-medium ${
-                    step.status === 'completed' 
-                      ? 'text-green-700'
-                      : step.status === 'current'
-                      ? 'text-blue-700'
-                      : 'text-gray-500'
-                  }`}>
-                    {step.title}
-                  </p>
-                  <p className="text-sm text-gray-500 truncate">
-                    {step.description}
-                  </p>
+                <div className="mt-2 text-center">
+                  <div
+                    className={cn(
+                      'text-sm font-medium',
+                      isCompleted || isCurrent
+                        ? 'text-slate-900'
+                        : 'text-slate-400'
+                    )}
+                  >
+                    {step.label}
+                  </div>
+                  {step.description && (
+                    <div className="text-xs text-slate-500 mt-1">
+                      {step.description}
+                    </div>
+                  )}
                 </div>
               </div>
-
-              {stepIdx !== steps.length - 1 && (
-                <div className="absolute top-4 left-8 -ml-px mt-0.5 h-0.5 w-full bg-gray-200" aria-hidden="true" />
+              {index < steps.length - 1 && (
+                <div
+                  className={cn(
+                    'flex-1 h-0.5 mx-4 transition-colors',
+                    index < currentIndex ? 'bg-blue-600' : 'bg-slate-200'
+                  )}
+                />
               )}
-            </li>
-          ))}
-        </ol>
-      </nav>
+            </React.Fragment>
+          );
+        })}
+      </div>
     </div>
   );
 }

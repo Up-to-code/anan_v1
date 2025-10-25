@@ -1,45 +1,86 @@
-// components/ui/Modal.tsx
+"use client";
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '@/lib/utils';
 import { X } from 'lucide-react';
 
 interface ModalProps {
+  children: React.ReactNode;
   isOpen: boolean;
   onClose: () => void;
-  title: string;
-  children: React.ReactNode;
+  title?: string;
   size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
 }
 
-export function Modal({ isOpen, onClose, title, children, size = 'md' }: ModalProps) {
-  if (!isOpen) return null;
+export function Modal({
+  children,
+  isOpen,
+  onClose,
+  title,
+  size = 'md',
+  className
+}: ModalProps) {
+  const [mounted, setMounted] = React.useState(false);
 
-  const sizes = {
+  React.useEffect(() => {
+    setMounted(true);
+    if (isOpen) {
+      document.body.style.overflow = 'hidden';
+    } else {
+      document.body.style.overflow = 'unset';
+    }
+
+    return () => {
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen]);
+
+  const sizeClasses = {
     sm: 'max-w-md',
     md: 'max-w-lg',
     lg: 'max-w-2xl',
     xl: 'max-w-4xl'
   };
 
-  return (
-    <div className="fixed inset-0 z-50 overflow-y-auto">
-      <div className="flex min-h-full items-end justify-center p-4 text-center sm:items-center sm:p-0">
-        <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" onClick={onClose} />
+  const handleBackdropClick = (e: React.MouseEvent) => {
+    if (e.target === e.currentTarget) {
+      onClose();
+    }
+  };
 
-        <div className={`relative transform overflow-hidden rounded-lg bg-white text-left shadow-xl transition-all sm:my-8 w-full ${sizes[size]}`}>
-          <div className="flex items-center justify-between px-6 py-4 border-b border-gray-200">
-            <h3 className="text-lg font-semibold text-gray-900">{title}</h3>
+  if (!mounted || !isOpen) return null;
+
+  return createPortal(
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black bg-opacity-50 backdrop-blur-sm"
+      onClick={handleBackdropClick}
+    >
+      <div
+        className={cn(
+          'bg-white rounded-xl shadow-xl w-full max-h-[90vh] overflow-auto',
+          sizeClasses[size],
+          className
+        )}
+      >
+        {(title || typeof onClose === 'function') && (
+          <div className="flex items-center justify-between p-6 border-b border-slate-200">
+            {title && (
+              <h2 className="text-xl font-semibold text-slate-900">{title}</h2>
+            )}
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 transition-colors"
+              className="p-1 hover:bg-slate-100 rounded-lg transition-colors"
+              aria-label="Close"
+              type="button"
             >
-              <X size={20} />
+              <X className="h-5 w-5 text-slate-500" />
             </button>
           </div>
-          
-          <div className="px-6 py-4">
-            {children}
-          </div>
-        </div>
+        )}
+        <div className="p-6">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

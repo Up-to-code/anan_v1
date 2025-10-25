@@ -1,104 +1,129 @@
-// components/ui/ImageUpload.tsx
-import { useState, useRef } from 'react';
-import { Upload, X, Image as ImageIcon } from 'lucide-react';
+"use client";
+import React, { useCallback } from 'react';
+import { cn } from '@/lib/utils';
+import { Upload, X } from 'lucide-react';
 
 interface ImageUploadProps {
   value?: string;
-  onChange: (file: File | null) => void;
-  label?: string;
-  helperText?: string;
-  error?: string;
+  onChange: (value: string) => void;
+  className?: string;
   disabled?: boolean;
 }
 
 export function ImageUpload({
   value,
   onChange,
-  label = 'Upload Image',
-  helperText,
-  error,
+  className,
   disabled = false
 }: ImageUploadProps) {
-  const [preview, setPreview] = useState<string | null>(value || null);
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const [preview, setPreview] = React.useState(value);
+  const [isDragOver, setIsDragOver] = React.useState(false);
 
-  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+  React.useEffect(() => {
+    setPreview(value);
+  }, [value]);
+
+  const handleFile = useCallback((file: File) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const result = e.target?.result as string;
+      setPreview(result);
+      onChange(result);
+    };
+    reader.readAsDataURL(file);
+  }, [onChange]);
+
+  const handleDrop = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+    
+    const files = Array.from(e.dataTransfer.files);
+    const imageFile = files.find(file => file.type.startsWith('image/'));
+    
+    if (imageFile) {
+      handleFile(imageFile);
+    }
+  }, [handleFile]);
+
+  const handleChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (file) {
-      onChange(file);
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
+      handleFile(file);
     }
-  };
+  }, [handleFile]);
 
-  const handleRemove = () => {
-    onChange(null);
-    setPreview(null);
-    if (fileInputRef.current) {
-      fileInputRef.current.value = '';
-    }
-  };
+  const handleClear = useCallback(() => {
+    setPreview(undefined);
+    onChange('');
+  }, [onChange]);
+
+  const handleDragOver = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(true);
+  }, []);
+
+  const handleDragLeave = useCallback((e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragOver(false);
+  }, []);
 
   return (
-    <div className="space-y-2">
-      {label && (
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-        </label>
-      )}
-
-      <div className="flex items-center space-x-4">
-        {preview ? (
-          <div className="relative">
-            <img
-              src={preview}
-              alt="Preview"
-              className="w-20 h-20 rounded-lg object-cover border border-gray-200"
-            />
-            {!disabled && (
-              <button
-                type="button"
-                onClick={handleRemove}
-                className="absolute -top-2 -right-2 bg-red-500 text-white rounded-full p-1 shadow-lg"
-              >
-                <X size={14} />
-              </button>
-            )}
-          </div>
-        ) : (
-          <div className="w-20 h-20 rounded-lg border-2 border-dashed border-gray-300 flex items-center justify-center bg-gray-50">
-            <ImageIcon size={24} className="text-gray-400" />
-          </div>
-        )}
-
-        <div className="flex-1">
+    <div className={cn('w-full', className)}>
+      {preview ? (
+        <div className="relative inline-block">
+          <img
+            src={preview}
+            alt="Preview"
+            className="h-32 w-32 rounded-lg object-cover border border-slate-200"
+          />
+          {!disabled && (
+            <button
+              type="button"
+              onClick={handleClear}
+              className="absolute -top-2 -right-2 p-1 bg-red-500 text-white rounded-full hover:bg-red-600 transition-colors"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          )}
+        </div>
+      ) : (
+        <div
+          onDrop={handleDrop}
+          onDragOver={handleDragOver}
+          onDragLeave={handleDragLeave}
+          className={cn(
+            'border-2 border-dashed rounded-lg p-6 text-center transition-colors',
+            isDragOver
+              ? 'border-blue-500 bg-blue-50'
+              : 'border-slate-300 hover:border-slate-400',
+            disabled && 'opacity-50 cursor-not-allowed'
+          )}
+        >
           <input
-            ref={fileInputRef}
             type="file"
             accept="image/*"
-            onChange={handleFileChange}
+            onChange={handleChange}
             disabled={disabled}
             className="hidden"
+            id="image-upload"
           />
-          <button
-            type="button"
-            onClick={() => fileInputRef.current?.click()}
-            disabled={disabled}
-            className="bg-white border border-gray-300 rounded-lg px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed"
+          <label
+            htmlFor="image-upload"
+            className={cn(
+              'cursor-pointer block',
+              disabled && 'cursor-not-allowed'
+            )}
           >
-            <Upload size={16} className="inline mr-2" />
-            Choose Image
-          </button>
+            <Upload className="mx-auto h-8 w-8 text-slate-400 mb-2" />
+            <div className="text-sm text-slate-600">
+              <span className="font-medium text-blue-600">Click to upload</span>
+              {' or drag and drop'}
+            </div>
+            <div className="text-xs text-slate-500 mt-1">
+              PNG, JPG, GIF up to 10MB
+            </div>
+          </label>
         </div>
-      </div>
-
-      {(helperText || error) && (
-        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-500'}`}>
-          {error || helperText}
-        </p>
       )}
     </div>
   );

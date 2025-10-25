@@ -1,79 +1,62 @@
-// components/ui/Button.tsx
-import { LucideIcon } from 'lucide-react';
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-interface ButtonProps {
-  children: React.ReactNode;
-  onClick?: () => void;
-  type?: 'button' | 'submit' | 'reset';
-  variant?: 'primary' | 'secondary' | 'danger' | 'success' | 'ghost';
-  size?: 'sm' | 'md' | 'lg';
-  disabled?: boolean;
-  loading?: boolean;
-  icon?: LucideIcon;
-  iconPosition?: 'left' | 'right';
-  className?: string;
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
+  variant?: 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger';
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  isLoading?: boolean;
+  leftIcon?: React.ReactNode;
+  rightIcon?: React.ReactNode;
 }
 
 export function Button({
   children,
-  onClick,
-  type = 'button',
+  className,
   variant = 'primary',
   size = 'md',
-  disabled = false,
-  loading = false,
-  icon: Icon,
-  iconPosition = 'left',
-  className = ''
+  isLoading = false,
+  leftIcon,
+  rightIcon,
+  disabled,
+  ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
-  const variants = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm',
-    secondary: 'bg-gray-100 text-gray-700 border border-gray-300 hover:bg-gray-200 focus:ring-gray-500 shadow-sm',
-    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm',
-    success: 'bg-green-600 text-white hover:bg-green-700 focus:ring-green-500 shadow-sm',
-    ghost: 'bg-transparent text-gray-600 hover:bg-gray-100 focus:ring-gray-500'
+  const variantClasses = {
+    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm hover:shadow-md',
+    secondary: 'bg-slate-200 text-slate-900 hover:bg-slate-300 focus:ring-slate-500 shadow-sm hover:shadow-md',
+    outline: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-blue-500',
+    ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-500',
+    danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md'
   };
 
-  const sizes = {
-    sm: 'px-3 py-1.5 text-xs gap-1.5',
+  const sizeClasses = {
+    sm: 'px-3 py-1.5 text-sm gap-1.5',
     md: 'px-4 py-2 text-sm gap-2',
-    lg: 'px-6 py-3 text-base gap-2.5'
-  };
-
-  const iconSizes = {
-    sm: 14,
-    md: 16,
-    lg: 18
+    lg: 'px-6 py-3 text-base gap-2',
+    xl: 'px-8 py-4 text-lg gap-3'
   };
 
   return (
     <button
-      type={type}
-      onClick={onClick}
-      disabled={disabled || loading}
-      className={`
-        ${baseStyles}
-        ${variants[variant]}
-        ${sizes[size]}
-        ${className}
-      `}
+      className={cn(
+        baseClasses,
+        variantClasses[variant],
+        sizeClasses[size],
+        className
+      )}
+      disabled={disabled || isLoading}
+      {...props}
     >
-      {loading && (
-        <div className="animate-spin rounded-full border-2 border-current border-t-transparent" 
-             style={{ width: iconSizes[size], height: iconSizes[size] }} />
+      {isLoading && (
+        <svg className="animate-spin h-4 w-4 mr-2" fill="none" viewBox="0 0 24 24">
+          <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" />
+          <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z" />
+        </svg>
       )}
-      
-      {!loading && Icon && iconPosition === 'left' && (
-        <Icon size={iconSizes[size]} />
-      )}
-      
+      {!isLoading && leftIcon}
       {children}
-      
-      {!loading && Icon && iconPosition === 'right' && (
-        <Icon size={iconSizes[size]} />
-      )}
+      {rightIcon}
     </button>
   );
 }

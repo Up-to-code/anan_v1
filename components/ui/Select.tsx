@@ -1,125 +1,108 @@
-// components/ui/Select.tsx
-import { useState, useRef, useEffect } from 'react';
-import { ChevronDown, Check } from 'lucide-react';
+"use client";
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { ChevronDown } from 'lucide-react';
 
-interface SelectOption {
+interface SelectItemProps {
+  children: React.ReactNode;
   value: string;
-  label: string;
-  disabled?: boolean;
+  onSelect?: (value: string) => void;
+  isSelected?: boolean;
+}
+
+export function SelectItem({
+  children,
+  value,
+  onSelect,
+  isSelected
+}: SelectItemProps) {
+  return (
+    <button
+      type="button"
+      onClick={() => onSelect?.(value)}
+      className={cn(
+        'w-full rounded-md px-3 py-2 text-left text-sm transition-colors',
+        isSelected
+          ? 'bg-blue-50 text-blue-900'
+          : 'hover:bg-slate-100 text-slate-900'
+      )}
+    >
+      {children}
+    </button>
+  );
 }
 
 interface SelectProps {
-  label?: string;
-  value: string;
-  onChange: (value: string) => void;
-  options: SelectOption[];
-  placeholder?: string;
-  helperText?: string;
-  error?: string;
-  disabled?: boolean;
+  value?: string;
+  onValueChange?: (value: string) => void;
+  children: React.ReactNode;
   className?: string;
-  name?: string;
-  required?: boolean;
+  placeholder?: string;
 }
 
 export function Select({
-  label,
   value,
-  onChange,
-  options,
-  placeholder = "Select an option",
-  helperText,
-  error,
-  disabled = false,
-  className = '',
-  name,
-  required = false
+  onValueChange,
+  children,
+  className,
+  placeholder = "Select an option"
 }: SelectProps) {
-  const [isOpen, setIsOpen] = useState(false);
-  const selectRef = useRef<HTMLDivElement>(null);
+  const [isOpen, setIsOpen] = React.useState(false);
+  const [selectedValue, setSelectedValue] = React.useState(value);
 
-  const selectedOption = options.find(opt => opt.value === value);
+  const childArray = React.Children.toArray(children) as React.ReactElement<SelectItemProps>[];
+  const selectedChild = childArray.find(
+    (child) => React.isValidElement(child) && child.props.value === selectedValue
+  );
 
-  useEffect(() => {
-    function handleClickOutside(event: MouseEvent) {
-      if (selectRef.current && !selectRef.current.contains(event.target as Node)) {
-        setIsOpen(false);
-      }
+  const handleSelect = (val: string) => {
+    setSelectedValue(val);
+    onValueChange?.(val);
+    setIsOpen(false);
+  };
+
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setSelectedValue(value);
     }
-
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
-  }, []);
+  }, [value]);
 
   return (
-    <div className={`space-y-2 ${className}`} ref={selectRef}>
-      {label && (
-        <label className="block text-sm font-medium text-gray-700">
-          {label}
-          {required && <span className="text-red-500 ml-1">*</span>}
-        </label>
-      )}
-      
-      {/* Hidden input for form submission */}
-      {name && <input type="hidden" name={name} value={value} />}
-      
-      <div className="relative">
-        <button
-          type="button"
-          onClick={() => !disabled && setIsOpen(!isOpen)}
-          disabled={disabled}
-          className={`
-            relative w-full bg-white border rounded-lg shadow-sm pl-3 pr-10 py-2 text-left cursor-default focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500
-            ${error 
-              ? 'border-red-300' 
-              : 'border-gray-300'
-            }
-            ${disabled ? 'bg-gray-50 text-gray-500 cursor-not-allowed' : 'hover:bg-gray-50'}
-          `}
-        >
-          <span className={`block truncate ${!selectedOption ? 'text-gray-500' : ''}`}>
-            {selectedOption?.label || placeholder}
-          </span>
-          <span className="absolute inset-y-0 right-0 flex items-center pr-2 pointer-events-none">
-            <ChevronDown 
-              size={20} 
-              className={`text-gray-400 transition-transform ${isOpen ? 'rotate-180' : ''}`}
-            />
-          </span>
-        </button>
-
-        {isOpen && (
-          <div className="absolute z-10 w-full mt-1 bg-white shadow-lg max-h-60 rounded-md py-1 text-base ring-1 ring-black ring-opacity-5 overflow-auto focus:outline-none">
-            {options.map((option) => (
-              <button
-                key={option.value}
-                onClick={() => {
-                  onChange(option.value);
-                  setIsOpen(false);
-                }}
-                disabled={option.disabled}
-                className={`
-                  relative w-full text-left py-2 pl-3 pr-9 cursor-default select-none
-                  ${option.value === value ? 'bg-blue-50 text-blue-900' : 'text-gray-900'}
-                  ${option.disabled ? 'text-gray-400 cursor-not-allowed' : 'hover:bg-gray-50'}
-                `}
-              >
-                <span className="block truncate">{option.label}</span>
-                {option.value === value && (
-                  <span className="absolute inset-y-0 right-0 flex items-center pr-4 text-blue-600">
-                    <Check size={16} />
-                  </span>
-                )}
-              </button>
-            ))}
-          </div>
+    <div className="relative">
+      <button
+        type="button"
+        onClick={() => setIsOpen(!isOpen)}
+        className={cn(
+          'flex w-full items-center justify-between rounded-lg border border-slate-300 bg-white px-3 py-2 text-left text-sm transition-colors focus:border-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-500/20',
+          className
         )}
-      </div>
+      >
+        <span className={cn(!selectedValue && 'text-slate-400')}>
+          {selectedChild && React.isValidElement(selectedChild)
+            ? selectedChild.props.children
+            : placeholder}
+        </span>
+        <ChevronDown
+          className={cn(
+            'h-4 w-4 text-slate-400 transition-transform',
+            isOpen && 'rotate-180'
+          )}
+        />
+      </button>
 
-      {(helperText || error) && (
-        <p className={`text-sm ${error ? 'text-red-600' : 'text-gray-500'}`}>
-          {error || helperText}
-        </p>
+      {isOpen && (
+        <div className="absolute z-10 mt-1 w-full rounded-lg border border-slate-200 bg-white shadow-lg">
+          <div className="max-h-60 overflow-auto p-1">
+            {childArray.map((child) =>
+              React.isValidElement(child)
+                ? React.cloneElement(child, {
+                    onSelect: handleSelect,
+                    isSelected: child.props.value === selectedValue
+                  })
+                : child
+            )}
+          </div>
+        </div>
       )}
     </div>
   );

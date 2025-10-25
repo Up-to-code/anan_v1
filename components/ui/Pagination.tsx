@@ -1,72 +1,94 @@
-// components/ui/Pagination.tsx
+import React from 'react';
+import { cn } from '@/lib/utils';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
 
 interface PaginationProps {
   currentPage: number;
   totalPages: number;
   onPageChange: (page: number) => void;
+  className?: string;
 }
 
-export function Pagination({ currentPage, totalPages, onPageChange }: PaginationProps) {
-  const pages = Array.from({ length: totalPages }, (_, i) => i + 1);
-  
+export function Pagination({
+  currentPage,
+  totalPages,
+  onPageChange,
+  className
+}: PaginationProps) {
+  const pages = React.useMemo(() => {
+    const visiblePages = 5;
+    const start = Math.max(1, currentPage - Math.floor(visiblePages / 2));
+    const end = Math.min(totalPages, start + visiblePages - 1);
+    
+    const pages = [];
+    for (let i = start; i <= end; i++) {
+      pages.push(i);
+    }
+    return pages;
+  }, [currentPage, totalPages]);
+
+  if (totalPages <= 1) return null;
+
   return (
-    <div className="flex items-center justify-between border-t border-gray-200 px-4 py-3 sm:px-6">
-      <div className="flex flex-1 justify-between sm:hidden">
+    <nav className={cn('flex items-center justify-center space-x-1', className)}>
+      <button
+        onClick={() => onPageChange(currentPage - 1)}
+        disabled={currentPage === 1}
+        className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronLeft className="h-4 w-4" />
+      </button>
+
+      {pages[0] > 1 && (
+        <>
+          <button
+            onClick={() => onPageChange(1)}
+            className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            1
+          </button>
+          {pages[0] > 2 && (
+            <span className="px-2 text-slate-400">...</span>
+          )}
+        </>
+      )}
+
+      {pages.map((page) => (
         <button
-          onClick={() => onPageChange(currentPage - 1)}
-          disabled={currentPage === 1}
-          className="relative inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
+          key={page}
+          onClick={() => onPageChange(page)}
+          className={cn(
+            'px-3 py-2 rounded-lg font-medium transition-colors',
+            page === currentPage
+              ? 'bg-blue-600 text-white'
+              : 'text-slate-600 hover:bg-slate-50'
+          )}
         >
-          Previous
+          {page}
         </button>
-        <button
-          onClick={() => onPageChange(currentPage + 1)}
-          disabled={currentPage === totalPages}
-          className="relative ml-3 inline-flex items-center rounded-md border border-gray-300 bg-white px-4 py-2 text-sm font-medium text-gray-700 hover:bg-gray-50 disabled:opacity-50"
-        >
-          Next
-        </button>
-      </div>
-      <div className="hidden sm:flex sm:flex-1 sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-gray-700">
-            Page <span className="font-medium">{currentPage}</span> of{' '}
-            <span className="font-medium">{totalPages}</span>
-          </p>
-        </div>
-        <div>
-          <nav className="isolate inline-flex -space-x-px rounded-md shadow-sm">
-            <button
-              onClick={() => onPageChange(currentPage - 1)}
-              disabled={currentPage === 1}
-              className="relative inline-flex items-center rounded-l-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-            >
-              <ChevronLeft size={20} />
-            </button>
-            {pages.map((page) => (
-              <button
-                key={page}
-                onClick={() => onPageChange(page)}
-                className={`relative inline-flex items-center px-4 py-2 text-sm font-semibold ${
-                  currentPage === page
-                    ? 'z-10 bg-blue-500 text-white focus:z-20 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-blue-500'
-                    : 'text-gray-900 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0'
-                }`}
-              >
-                {page}
-              </button>
-            ))}
-            <button
-              onClick={() => onPageChange(currentPage + 1)}
-              disabled={currentPage === totalPages}
-              className="relative inline-flex items-center rounded-r-md px-2 py-2 text-gray-400 ring-1 ring-inset ring-gray-300 hover:bg-gray-50 focus:z-20 focus:outline-offset-0 disabled:opacity-50"
-            >
-              <ChevronRight size={20} />
-            </button>
-          </nav>
-        </div>
-      </div>
-    </div>
+      ))}
+
+      {pages[pages.length - 1] < totalPages && (
+        <>
+          {pages[pages.length - 1] < totalPages - 1 && (
+            <span className="px-2 text-slate-400">...</span>
+          )}
+          <button
+            onClick={() => onPageChange(totalPages)}
+            className="px-3 py-2 rounded-lg text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            {totalPages}
+          </button>
+        </>
+      )}
+
+      <button
+        onClick={() => onPageChange(currentPage + 1)}
+        disabled={currentPage === totalPages}
+        className="p-2 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+      >
+        <ChevronRight className="h-4 w-4" />
+      </button>
+    </nav>
   );
 }

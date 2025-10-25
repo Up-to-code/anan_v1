@@ -1,13 +1,14 @@
 "use client";
-// components/ui/Toast.tsx
-import { createContext, useContext, useState, ReactNode } from 'react';
-import { X, CheckCircle, AlertCircle, Info, AlertTriangle } from 'lucide-react';
+import React from 'react';
+import { createPortal } from 'react-dom';
+import { cn } from '@/lib/utils';
+import { X, CheckCircle, AlertCircle, Info, XCircle } from 'lucide-react';
 
 interface Toast {
   id: string;
   title: string;
-  message?: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  description?: string;
+  variant?: 'success' | 'error' | 'warning' | 'info';
   duration?: number;
 }
 
@@ -17,89 +18,105 @@ interface ToastContextType {
   removeToast: (id: string) => void;
 }
 
-const ToastContext = createContext<ToastContextType | undefined>(undefined);
+const ToastContext = React.createContext<ToastContextType | undefined>(undefined);
 
-export function ToastProvider({ children }: { children: ReactNode }) {
-  const [toasts, setToasts] = useState<Toast[]>([]);
+export function ToastProvider({ children }: { children: React.ReactNode }) {
+  const [toasts, setToasts] = React.useState<Toast[]>([]);
+  const [mounted, setMounted] = React.useState(false);
 
-  const addToast = (toast: Omit<Toast, 'id'>) => {
-    const id = crypto.randomUUID();
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
+  // Fix: move removeToast above addToast so removeToast can be safely referenced inside addToast
+  const removeToast = React.useCallback((id: string) => {
+    setToasts((prev) => prev.filter((toast) => toast.id !== id));
+  }, []);
+
+  const addToast = React.useCallback((toast: Omit<Toast, 'id'>) => {
+    const id = Math.random().toString(36).substr(2, 9);
     const newToast = { ...toast, id };
 
-    setToasts(prev => [...prev, newToast]);
+    setToasts((prev) => [...prev, newToast]);
 
-    // Auto remove after duration
-    setTimeout(() => {
-      removeToast(id);
-    }, toast.duration || 5000);
-  };
-
-  const removeToast = (id: string) => {
-    setToasts(prev => prev.filter(toast => toast.id !== id));
-  };
+    if (toast.duration !== 0) {
+      setTimeout(() => {
+        removeToast(id);
+      }, toast.duration || 5000);
+    }
+  }, [removeToast]);
 
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
       {children}
-      <ToastContainer />
+      {mounted && createPortal(
+        <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
+          {toasts.map((toast) => (
+            <ToastItem
+              key={toast.id}
+              toast={toast}
+              onClose={() => removeToast(toast.id)}
+            />
+          ))}
+        </div>,
+        document.body
+      )}
     </ToastContext.Provider>
   );
 }
 
-function ToastContainer() {
-  const { toasts, removeToast } = useToast();
-
-  if (toasts.length === 0) return null;
-
-  return (
-    <div className="fixed top-4 right-4 z-50 space-y-2 max-w-sm">
-      {toasts.map((toast) => (
-        <ToastItem key={toast.id} toast={toast} onClose={() => removeToast(toast.id)} />
-      ))}
-    </div>
-  );
+export function useToast() {
+  const context = React.useContext(ToastContext);
+  if (!context) {
+    throw new Error('useToast must be used within a ToastProvider');
+  }
+  return context;
 }
 
-function ToastItem({ toast, onClose }: { toast: Toast; onClose: () => void }) {
-  const icons = {
+interface ToastItemProps {
+  toast: Toast;
+  onClose: () => void;
+}
+
+function ToastItem({ toast, onClose }: ToastItemProps) {
+  const variantIcons = {
     success: CheckCircle,
-    error: AlertCircle,
-    warning: AlertTriangle,
+    error: XCircle,
+    warning: AlertCircle,
     info: Info
   };
 
-  const styles = {
+  const variantStyles = {
     success: 'bg-green-50 border-green-200 text-green-800',
     error: 'bg-red-50 border-red-200 text-red-800',
     warning: 'bg-yellow-50 border-yellow-200 text-yellow-800',
     info: 'bg-blue-50 border-blue-200 text-blue-800'
   };
 
-  const Icon = icons[toast.type];
+  const IconComponent = variantIcons[toast.variant || 'info'];
 
   return (
-    <div className={`flex items-start p-4 border rounded-lg shadow-sm ${styles[toast.type]}`}>
-      <Icon size={20} className="flex-shrink-0 mt-0.5" />
-      <div className="ml-3 flex-1">
-        <p className="text-sm font-medium">{toast.title}</p>
-        {toast.message && (
-          <p className="text-sm mt-1 opacity-90">{toast.message}</p>
-        )}
+    <div
+      className={cn(
+        'rounded-lg border p-4 shadow-lg transition-all duration-300 animate-in slide-in-from-right-full',
+        variantStyles[toast.variant || 'info']
+      )}
+    >
+      <div className="flex items-start">
+        <IconComponent className="h-5 w-5 flex-shrink-0 mt-0.5 mr-3" />
+        <div className="flex-1">
+          <div className="font-semibold">{toast.title}</div>
+          {toast.description && (
+            <div className="text-sm mt-1">{toast.description}</div>
+          )}
+        </div>
+        <button
+          onClick={onClose}
+          className="ml-4 flex-shrink-0 text-slate-400 hover:text-slate-600 transition-colors"
+        >
+          <X className="h-4 w-4" />
+        </button>
       </div>
-      <button
-        onClick={onClose}
-        className="ml-4 flex-shrink-0 text-gray-400 hover:text-gray-600 transition-colors"
-      >
-        <X size={16} />
-      </button>
     </div>
   );
-}
-
-export function useToast() {
-  const context = useContext(ToastContext);
-  if (!context) {
-    throw new Error('useToast must be used within a ToastProvider');
-  }
-  return context;
 }

@@ -1,39 +1,35 @@
-import React from "react";
-import { ChevronRightCircle } from 'lucide-react';
-
-interface BreadcrumbItem {
-  label: string;
-  href: string;
-}
+import React from 'react';
+import { cn } from '@/lib/utils';
+import { ChevronRight } from 'lucide-react';
 
 interface BreadcrumbProps {
-  items: BreadcrumbItem[];
+  items: {
+    label: string;
+    href?: string;
+  }[];
+  className?: string;
 }
 
-export function Breadcrumb({ items }: BreadcrumbProps) {
+export function Breadcrumb({ items, className }: BreadcrumbProps) {
   return (
-    <nav className="flex" aria-label="Breadcrumb">
-      <ol className="flex items-center space-x-4">
-        {items.map((item, index) => (
-          <li key={item.href}>
-            <div className="flex items-center">
-              {index > 0 && <ChevronRightCircle size={16} className="text-gray-400 mx-4" />}
-              <a
-                href={item.href}
-                className={`text-sm font-medium ${
-                  index === items.length - 1
-                    ? 'text-gray-500 cursor-default'
-                    : 'text-gray-500 hover:text-gray-700'
-                }`}
-                aria-current={index === items.length - 1 ? "page" : undefined}
-                tabIndex={index === items.length - 1 ? -1 : 0}
-              >
-                {item.label}
-              </a>
-            </div>
-          </li>
-        ))}
-      </ol>
+    <nav className={cn('flex items-center space-x-2 text-sm', className)}>
+      {items.map((item, index) => (
+        <React.Fragment key={index}>
+          {index > 0 && (
+            <ChevronRight className="h-4 w-4 text-slate-400" />
+          )}
+          {item.href ? (
+            <a
+              href={item.href}
+              className="text-slate-600 hover:text-slate-900 transition-colors"
+            >
+              {item.label}
+            </a>
+          ) : (
+            <span className="text-slate-900 font-medium">{item.label}</span>
+          )}
+        </React.Fragment>
+      ))}
     </nav>
   );
 }

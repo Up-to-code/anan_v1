@@ -1,73 +1,71 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-// components/ui/DataGrid.tsx
-import { useState } from 'react';
-import { Search, Filter, Download } from 'lucide-react';
-import { Input } from './Input';
-import { Button } from './Button';
-import { Table } from './Table';
+import React from 'react';
+import { cn } from '@/lib/utils';
 
-interface DataGridProps {
+type ValueOf<T, K extends keyof T> = T[K];
+
+interface Column<T> {
+  key: keyof T;
   title: string;
-  columns: any[];
-  data: any[];
-  onAdd?: () => void;
-  onExport?: () => void;
-  onSearch?: (query: string) => void;
-  loading?: boolean;
-  addButtonLabel?: string;
+  render?: (value: ValueOf<T, keyof T>, row: T) => React.ReactNode;
+  width?: string;
 }
 
-export function DataGrid({
-  title,
+interface DataGridProps<T> {
+  columns: Column<T>[];
+  data: T[];
+  keyField: keyof T;
+  className?: string;
+  emptyMessage?: string;
+}
+
+export function DataGrid<T extends Record<string, unknown>>({
   columns,
   data,
-  onAdd,
-  onExport,
-  onSearch,
-  loading = false,
-  addButtonLabel = "Add New"
-}: DataGridProps) {
-  const [searchQuery, setSearchQuery] = useState('');
-
-  const handleSearch = (value: string) => {
-    setSearchQuery(value);
-    onSearch?.(value);
-  };
-
+  keyField,
+  className,
+  emptyMessage = "No data available"
+}: DataGridProps<T>) {
   return (
-    <div className="space-y-6">
-      {/* Header */}
-      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <h2 className="text-2xl font-bold text-gray-900">{title}</h2>
-          <p className="text-gray-600 mt-1">
-            {data.length} {data.length === 1 ? 'item' : 'items'} total
-          </p>
-        </div>
-        
-        <div className="flex items-center space-x-3 mt-4 sm:mt-0">
-          <Input
-            type="search"
-            value={searchQuery}
-            onChange={handleSearch}
-            placeholder="Search..."
-            className="w-full sm:w-64"
-          />
-          {onExport && (
-            <Button variant="secondary" icon={Download} onClick={onExport}>
-              Export
-            </Button>
+    <div className={cn('overflow-x-auto bg-white rounded-lg border border-slate-200', className)}>
+      <table className="w-full">
+        <thead>
+          <tr className="border-b border-slate-200 bg-slate-50">
+            {columns.map((column) => (
+              <th
+                key={String(column.key)}
+                className="px-4 py-3 text-left text-sm font-semibold text-slate-900"
+                style={{ width: column.width }}
+              >
+                {column.title}
+              </th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.length === 0 ? (
+            <tr>
+              <td colSpan={columns.length} className="px-4 py-8 text-center text-slate-500">
+                {emptyMessage}
+              </td>
+            </tr>
+          ) : (
+            data.map((row) => (
+              <tr key={String(row[keyField])} className="border-b border-slate-200 hover:bg-slate-50">
+                {columns.map((column) => {
+                  const value = row[column.key];
+                  return (
+                    <td key={String(column.key)} className="px-4 py-3 text-sm text-slate-600">
+                      {column.render
+                        ? column.render(value, row)
+                        : value as React.ReactNode}
+                    </td>
+                  );
+                })}
+              </tr>
+            ))
           )}
-          {onAdd && (
-            <Button icon={Download} onClick={onAdd}>
-              {addButtonLabel}
-            </Button>
-          )}
-        </div>
-      </div>
-
-      {/* Table */}
-      <Table columns={columns} data={data} loading={loading} />
+        </tbody>
+      </table>
     </div>
   );
 }
