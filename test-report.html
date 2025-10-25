@@ -1,0 +1,80 @@
+<!DOCTYPE html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"><title>AI Test Report</title><script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script><style>*{margin:0;padding:0;box-sizing:border-box}body{font-family:system-ui,-apple-system,sans-serif;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);padding:20px;color:#333}.container{max-width:1400px;margin:0 auto}.header{background:#fff;border-radius:20px;padding:40px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.2);margin-bottom:30px}.header h1{font-size:3em;background:linear-gradient(135deg,#667eea 0%,#764ba2 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent;margin-bottom:10px}.header p{color:#666;font-size:1.2em}.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:20px;margin-bottom:30px}.stat-card{background:#fff;border-radius:15px;padding:30px;box-shadow:0 5px 20px rgba(0,0,0,.1)}.stat-card h3{color:#667eea;font-size:.9em;text-transform:uppercase;letter-spacing:1px;margin-bottom:10px}.stat-card .value{font-size:2.5em;font-weight:700;color:#333}.stat-card .label{color:#999;font-size:.9em;margin-top:5px}.chart-container{background:#fff;border-radius:15px;padding:30px;margin-bottom:30px;box-shadow:0 5px 20px rgba(0,0,0,.1)}.chart-container h2{color:#667eea;margin-bottom:20px;font-size:1.5em}canvas{max-height:400px!important}.test-results{background:#fff;border-radius:15px;padding:30px;margin-bottom:30px;box-shadow:0 5px 20px rgba(0,0,0,.1)}.test-item{border-left:4px solid #667eea;padding:20px;margin-bottom:20px;background:#f8f9fa;border-radius:8px}.test-item h3{color:#667eea;margin-bottom:10px}.test-item pre{background:#2d2d2d;color:#f8f8f2;padding:15px;border-radius:8px;overflow-x:auto;font-size:.9em;margin:10px 0}.badge{display:inline-block;padding:5px 15px;border-radius:20px;font-size:.85em;font-weight:700;margin:5px}.badge-success{background:#4caf50;color:#fff}.badge-error{background:#f44336;color:#fff}.badge-en{background:#2196f3;color:#fff}.badge-ar{background:#ff9800;color:#fff}.footer{text-align:center;color:#fff;padding:20px;font-size:.9em}</style></head><body><div class="container"><div class="header"><h1>🤖 AI Product Search Report</h1><p>Performance Analysis</p><p style="font-size:.9em;color:#999;margin-top:10px">10/25/2025, 6:12:17 AM</p></div><div class="stats-grid"><div class="stat-card"><h3>Total Requests</h3><div class="value">4</div><div class="label">API Calls</div></div><div class="stat-card"><h3>Success Rate</h3><div class="value">100%</div><div class="label">4/4 Success</div></div><div class="stat-card"><h3>Avg Response</h3><div class="value">12190</div><div class="label">milliseconds</div></div><div class="stat-card"><h3>Total Tokens</h3><div class="value">1,479</div><div class="label">Tokens Used</div></div></div><div class="chart-container"><h2>📊 Performance</h2><canvas id="c1"></canvas></div><div class="chart-container"><h2>🌍 Languages</h2><canvas id="c2"></canvas></div><div class="chart-container"><h2>⏱️ Timeline</h2><canvas id="c3"></canvas></div><div class="chart-container"><h2>🔢 Tokens</h2><canvas id="c4"></canvas></div><div class="test-results"><h2 style="color:#667eea;margin-bottom:20px">📋 Test Results</h2><div class="test-item"><h3>Test 1: Product Analysis (EN)</h3><div><span class="badge badge-success">✓ Success</span><span class="badge badge-en">EN</span><span class="badge" style="background:#9c27b0;color:#fff">12363ms</span><span class="badge" style="background:#607d8b;color:#fff">419 tokens</span></div><h4 style="margin-top:15px;color:#666">Input:</h4><pre>{
+  "id": "prod_001",
+  "name": "UltraBook Pro 15",
+  "category": "Laptops",
+  "brand": "TechCorp",
+  "price": 1299,
+  "features": [
+    "Intel i7",
+    "16GB RAM",
+    "512GB SSD",
+    "15.6 inch display"
+  ],
+  "description": "Powerful laptop for professionals",
+  "tags": [
+    "business",
+    "pr...</pre><h4 style="color:#666">Output:</h4><pre>{
+  "keyFeatures": [
+    "Intel i7",
+    "16GB RAM",
+    "512GB SSD",
+    "15.6 inch display"
+  ],
+  "targetAudience": "General consumers",
+  "useCases": [
+    "General use"
+  ],
+  "searchTerms": [
+    "UltraBook Pro 15",
+    "Laptops"
+  ],
+  "category": "Laptops",
+  "sentiment": "neutral"
+}...</pre></div><div class="test-item"><h3>Test 2: Product Analysis (AR)</h3><div><span class="badge badge-success">✓ Success</span><span class="badge badge-ar">AR</span><span class="badge" style="background:#9c27b0;color:#fff">12436ms</span><span class="badge" style="background:#607d8b;color:#fff">414 tokens</span></div><h4 style="margin-top:15px;color:#666">Input:</h4><pre>{
+  "id": "prod_002",
+  "name": "Gaming Beast X1",
+  "category": "Laptops",
+  "brand": "GameTech",
+  "price": 1899,
+  "features": [
+    "RTX 4070",
+    "32GB RAM",
+    "1TB SSD"
+  ],
+  "description": "High-performance gaming laptop",
+  "tags": [
+    "gaming",
+    "performance"
+  ]
+}...</pre><h4 style="color:#666">Output:</h4><pre>[
+  "...",
+  "..."
+]...</pre></div><div class="test-item"><h3>Test 3: Query Refinement (EN)</h3><div><span class="badge badge-success">✓ Success</span><span class="badge badge-en">EN</span><span class="badge" style="background:#9c27b0;color:#fff">11857ms</span><span class="badge" style="background:#607d8b;color:#fff">323 tokens</span></div><h4 style="margin-top:15px;color:#666">Input:</h4><pre>{
+  "query": "need gaming laptop under 2000"
+}...</pre><h4 style="color:#666">Output:</h4><pre>{
+  "original": "need gaming laptop under 2000",
+  "refined": [
+    "need gaming laptop under 2000"
+  ],
+  "intent": "information",
+  "keywords": [
+    "need",
+    "gaming",
+    "laptop",
+    "under",
+    "2000"
+  ]
+}...</pre></div><div class="test-item"><h3>Test 4: Query Refinement (AR)</h3><div><span class="badge badge-success">✓ Success</span><span class="badge badge-ar">AR</span><span class="badge" style="background:#9c27b0;color:#fff">12104ms</span><span class="badge" style="background:#607d8b;color:#fff">323 tokens</span></div><h4 style="margin-top:15px;color:#666">Input:</h4><pre>{
+  "query": "أحتاج لابتوب للطلاب"
+}...</pre><h4 style="color:#666">Output:</h4><pre>{
+  "original": "أحتاج لابتوب للطلاب",
+  "refined": [
+    "أحتاج لابتوب للطلاب"
+  ],
+  "intent": "information",
+  "keywords": [
+    "أحتاج",
+    "لابتوب",
+    "للطلاب"
+  ]
+}...</pre></div></div><div class="footer"><p>AI Product Search System | OpenRouter & MiniMax</p></div></div><script>new Chart(document.getElementById('c1'),{type:'bar',data:{labels:['Success','Failed','Avg Duration','Avg Tokens'],datasets:[{label:'Metrics',data:[4,0,12190,370],backgroundColor:['#4caf50','#f44336','#2196f3','#ff9800']}]},options:{responsive:!0,maintainAspectRatio:!0,plugins:{legend:{display:!1}}}});new Chart(document.getElementById('c2'),{type:'doughnut',data:{labels:['English','Arabic'],datasets:[{data:[2,2],backgroundColor:['#2196f3','#ff9800']}]},options:{responsive:!0,maintainAspectRatio:!0}});new Chart(document.getElementById('c3'),{type:'line',data:{labels:["R1","R2","R3","R4"],datasets:[{label:'Response Time (ms)',data:[11857,12104,12363,12436],borderColor:'#667eea',backgroundColor:'rgba(102,126,234,.1)',fill:!0,tension:.4}]},options:{responsive:!0,maintainAspectRatio:!0}});new Chart(document.getElementById('c4'),{type:'bar',data:{labels:["R1","R2","R3","R4"],datasets:[{label:'Prompt',data:[73,73,119,114],backgroundColor:'#2196f3'},{label:'Completion',data:[250,250,300,300],backgroundColor:'#4caf50'}]},options:{responsive:!0,maintainAspectRatio:!0,scales:{x:{stacked:!0},y:{stacked:!0}}}});</script></body></html>

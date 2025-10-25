@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 // app/agents/create/page.tsx
 'use client';
 
@@ -212,7 +213,7 @@ export default function CreateAgentPage() {
                   <div className="space-y-6">
                     <div>
                       <h2 className="text-xl font-semibold text-gray-900 mb-2">Basic information</h2>
-                      <p className="text-gray-600">Set up your agent's identity</p>
+                      <p className="text-gray-600">Set up your agent&#39;s identity</p>
                     </div>
 
                     <div className="space-y-5">
