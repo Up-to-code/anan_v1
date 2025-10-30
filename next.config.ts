@@ -6,6 +6,7 @@ const nextConfig: NextConfig = {
     unoptimized: true,
   },
   cacheComponents: true,
+  transpilePackages: ['@lucide/react'],
 };
 
 export default nextConfig;
