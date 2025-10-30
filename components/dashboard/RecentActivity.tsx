@@ -1,6 +1,6 @@
 // components/dashboard/RecentActivity.tsx
-import { Card, CardHeader, CardContent } from '../ui/Card';
-import { Badge } from '../ui/Badge';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
+import { Badge } from '@/components/ui/Badge';
 import { User, ShoppingCart, DollarSign, FileText } from 'lucide-react';
 
 interface Activity {
