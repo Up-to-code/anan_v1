@@ -19,7 +19,6 @@ interface Product {
   thumbnail?: string;
 }
 
-// Mock data
 const PRODUCTS_DATA: Product[] = [
   {
     id: '1',
@@ -106,12 +105,14 @@ function ProductCard({ product, onEdit, onDelete }: {
   );
 }
 
-function CreateProductModal({ isOpen, onClose, onSave }: { 
-  isOpen: boolean; 
-  onClose: () => void; 
-  onSave: (product: any) => void; 
-}) {
-  const [formData, setFormData] = useState({
+interface CreateProductModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onSave: (product: Product) => void;
+}
+
+function CreateProductModal({ isOpen, onClose, onSave }: CreateProductModalProps) {
+  const [formData, setFormData] = useState<Omit<Product, 'id'>>({
     name: '',
     category: '',
     price: 0,
@@ -120,7 +121,7 @@ function CreateProductModal({ isOpen, onClose, onSave }: {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    const newProduct = {
+    const newProduct: Product = {
       id: Date.now().toString(),
       ...formData,
       thumbnail: formData.thumbnail || `/api/placeholder/400/300?text=${encodeURIComponent(formData.name)}`
@@ -172,7 +173,7 @@ function CreateProductModal({ isOpen, onClose, onSave }: {
               min="0"
               step="0.01"
               value={formData.price}
-              onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) }))}
+              onChange={(e) => setFormData(prev => ({ ...prev, price: parseFloat(e.target.value) || 0 }))}
               className="px-3 py-2 border border-gray-300 rounded focus:ring-1 focus:ring-blue-500"
               placeholder="Price"
             />

@@ -1,12 +1,14 @@
 import { AppLayout } from "@/components/layout/AppLayout";
+import React, { Suspense } from 'react';
+import Loading from './loading';
 
-
-const  DashboardLayout = ({ children }: { children: React.ReactNode }) => {
+const DashboardLayout = ({ children }: { children: React.ReactNode }) => {
   return (
     <AppLayout>
-      {children}
+      <Suspense fallback={<Loading />}>
+        {children}
+      </Suspense>
     </AppLayout>
-    
   );
 };
 

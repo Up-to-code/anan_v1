@@ -34,13 +34,9 @@ import {
   Mail, 
   Settings, 
   Download, 
-  Upload, 
   Plus,
   ChevronDown,
-  Star,
-  Heart,
-  Calendar,
-  Clock
+  Heart
 } from 'lucide-react';
 
 // Demo data for tables
@@ -64,8 +60,7 @@ function DemoContent() {
   const [toggleState, setToggleState] = useState(false);
   const [selectedValue, setSelectedValue] = useState('');
   const [image, setImage] = useState('');
-  const [activeTab, setActiveTab] = useState('buttons');
-  const [accordionValue, setAccordionValue] = useState('');
+  
 
   const steps = [
     { id: '1', label: 'Step 1', description: 'Account setup' },
@@ -79,13 +74,20 @@ function DemoContent() {
     { label: 'Data', href: '#' },
   ];
 
-  const dataGridColumns = [
-    { key: 'product', title: 'Product', width: '200px' },
-    { key: 'category', title: 'Category' },
-    { key: 'price', title: 'Price', render: (value: number) => `$${value.toFixed(2)}` },
-    { key: 'stock', title: 'Stock', render: (value: number) => (
-      <Badge variant={value > 10 ? 'success' : value > 0 ? 'warning' : 'error'}>
-        {value} in stock
+  type DataRow = { id: number; product: string; category: string; price: number; stock: number }
+  type ColumnDef<K extends keyof DataRow> = {
+    key: K
+    title: string
+    width?: string
+    render?: (value: DataRow[K], row: DataRow) => React.ReactNode
+  }
+  const dataGridColumns: Array<ColumnDef<'product' | 'category' | 'price' | 'stock'>> = [
+    { key: 'product' as const, title: 'Product', width: '200px' },
+    { key: 'category' as const, title: 'Category' },
+    { key: 'price' as const, title: 'Price', render: (value: string | number) => `$${Number(value).toFixed(2)}` },
+    { key: 'stock' as const, title: 'Stock', render: (value: string | number) => (
+      <Badge variant={Number(value) > 10 ? 'success' : Number(value) > 0 ? 'warning' : 'error'}>
+        {Number(value)} in stock
       </Badge>
     )},
   ];
@@ -100,7 +102,7 @@ function DemoContent() {
       </div>
 
       {/* Navigation Tabs */}
-      <Tabs value={activeTab} onValueChange={setActiveTab} className="mb-12">
+      <Tabs defaultValue="buttons" className="mb-12">
         <TabsList className="w-full max-w-2xl mx-auto mb-8">
           <TabsTrigger value="buttons">Buttons & Inputs</TabsTrigger>
           <TabsTrigger value="display">Display Components</TabsTrigger>
@@ -263,7 +265,7 @@ function DemoContent() {
                 <p className="text-slate-600">Card components with different content</p>
               </CardHeader>
               <CardContent className="space-y-4">
-                <Card padding="sm" hover>
+                <Card className="p-4">
                   <CardContent>
                     <h4 className="font-semibold">Small Card</h4>
                     <p className="text-sm text-slate-600">This is a small card with hover effect</p>
@@ -282,7 +284,7 @@ function DemoContent() {
                   </CardFooter>
                 </Card>
 
-                <Card padding="lg">
+                <Card className="p-8">
                   <CardContent>
                     <h4 className="font-semibold">Large Card</h4>
                     <p className="text-slate-600">This card has larger padding for more spacious content</p>
@@ -477,7 +479,7 @@ function DemoContent() {
                 <p className="text-slate-600">Organized content sections</p>
               </CardHeader>
               <CardContent>
-                <Tabs value="tab1" onValueChange={() => {}}>
+                <Tabs defaultValue="tab1">
                   <TabsList>
                     <TabsTrigger value="tab1">Tab 1</TabsTrigger>
                     <TabsTrigger value="tab2">Tab 2</TabsTrigger>
@@ -554,7 +556,7 @@ function DemoContent() {
                 <Alert variant="info">
                   <AlertTitle>Information</AlertTitle>
                   <AlertDescription>
-                    Here's some important information you should know.
+                    Here&apos;s some important information you should know.
                   </AlertDescription>
                 </Alert>
 

@@ -3,6 +3,7 @@
 import prisma from '@/lib/prisma'
 import { getTimeFilter, calculateRelevance } from '@/lib/actions/utils'
 import type { SearchFilters, SearchResult } from '@/lib/actions/types'
+import type { Prisma } from '@prisma/client'
 
 /**
  * Performs intelligent search across multiple entity types
@@ -19,14 +20,13 @@ export async function smartSearch(
 ): Promise<{ data?: SearchResult[]; error?: string }> {
   try {
     // Validate inputs
-    if (!userId || !query || !query.trim()) {
+    if (!userId || typeof userId !== 'string' || !query || !query.trim()) {
       return { error: 'Invalid search parameters' }
     }
-
     const sanitizedQuery = query.trim()
     const safeLimit = Math.min(Math.max(1, limit), 100) // Cap at 100
 
-    // Log the search asynchronously (don't await to improve performance)
+    // Log the search asynchronously
     const searchLogPromise = prisma.searchHistory.create({
       data: {
         query: sanitizedQuery,
@@ -34,24 +34,34 @@ export async function smartSearch(
         resultCount: 0,
         userId
       }
-    }).catch((err: any) => console.error('Failed to log search:', err))
+    }).catch((err: unknown) => {
+      // Fails silently but logs for investigation
+      console.error('Failed to log search:', err)
+    })
 
     // Search across multiple entities in parallel
-    const [
-      projectResults,
-      usageResults,
-      costResults,
-      userResults,
-      organizationResults
-    ] = await Promise.all([
-      searchProjects(sanitizedQuery, filters, safeLimit),
-      searchUsageMetrics(sanitizedQuery, filters, safeLimit),
-      searchCostRecords(sanitizedQuery, filters, safeLimit),
-      searchUsers(sanitizedQuery, filters, safeLimit),
-      searchOrganizations(sanitizedQuery, filters, safeLimit)
-    ])
+    let results: SearchResult[][] | null = null
+    try {
+      results = await Promise.all([
+        searchProjects(sanitizedQuery, filters, safeLimit),
+        searchUsageMetrics(sanitizedQuery, filters, safeLimit),
+        searchCostRecords(sanitizedQuery, filters, safeLimit),
+        searchUsers(sanitizedQuery, filters, safeLimit),
+        searchOrganizations(sanitizedQuery, filters, safeLimit)
+      ])
+    } catch (err) {
+      console.error('Error executing parallel search:', err)
+      return { error: 'Search failed (parallel query error)' }
+    }
 
-    // Combine all results (deduplication skipped to prevent logic bugs; revisit here if necessary)
+    const [
+      projectResults = [],
+      usageResults = [],
+      costResults = [],
+      userResults = [],
+      organizationResults = []
+    ] = results || []
+
     const allResults = [
       ...projectResults,
       ...usageResults,
@@ -60,12 +70,13 @@ export async function smartSearch(
       ...organizationResults
     ]
 
-    // Sort by relevance and limit
+    // Sort by relevance, highest first, then slice to safeLimit
     const sortedResults = allResults
+      .filter(r => typeof r.relevance === 'number' && !isNaN(r.relevance))
       .sort((a, b) => b.relevance - a.relevance)
       .slice(0, safeLimit)
 
-    // Update search log with result count (ignore failures)
+    // Update search log with result count
     try {
       await searchLogPromise
       await prisma.searchHistory.updateMany({
@@ -73,7 +84,7 @@ export async function smartSearch(
           userId,
           query: sanitizedQuery,
           createdAt: {
-            gte: new Date(Date.now() - 5000) // 5 seconds window to find most recent search
+            gte: new Date(Date.now() - 5000) // 5 seconds window
           }
         },
         data: {
@@ -85,7 +96,7 @@ export async function smartSearch(
     }
 
     return { data: sortedResults }
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Error in smartSearch:', error)
     return {
       error: error instanceof Error ? error.message : 'Search failed'
@@ -99,7 +110,7 @@ async function searchProjects(
   limit: number
 ): Promise<SearchResult[]> {
   try {
-    const whereConditions: any[] = [
+    const whereConditions: Prisma.ProjectWhereInput[] = [
       {
         OR: [
           { name: { contains: query, mode: 'insensitive' } },
@@ -109,6 +120,8 @@ async function searchProjects(
     ]
     if (filters.projectId) whereConditions.push({ id: filters.projectId })
     if (filters.organizationId) whereConditions.push({ organizationId: filters.organizationId })
+    // Defensive: skip impossible queries
+    if (filters.projectId && typeof filters.projectId !== 'string') return []
 
     const projects = await prisma.project.findMany({
       where: {
@@ -151,7 +164,7 @@ async function searchUsageMetrics(
   limit: number
 ): Promise<SearchResult[]> {
   try {
-    const whereConditions: any[] = [
+    const whereConditions: Prisma.UsageMetricWhereInput[] = [
       {
         OR: [
           { endpoint: { contains: query, mode: 'insensitive' } },
@@ -206,7 +219,7 @@ async function searchCostRecords(
   limit: number
 ): Promise<SearchResult[]> {
   try {
-    const whereConditions: any[] = [
+    const whereConditions: Prisma.CostRecordWhereInput[] = [
       {
         OR: [
           { model: { name: { contains: query, mode: 'insensitive' } } },
@@ -236,7 +249,7 @@ async function searchCostRecords(
       type: 'cost' as const,
       id: record.id,
       title: `Cost: ${record.model?.name || 'Unknown'}`,
-      description: `$${record.totalCost?.toFixed(2) ?? '0.00'} - ${record.project?.name || 'N/A'}`,
+      description: `$${record.totalCost !== undefined && record.totalCost !== null ? record.totalCost.toFixed(2) : '0.00'} - ${record.project?.name || 'N/A'}`,
       relevance: calculateRelevance(record.model?.name || '', query),
       metadata: {
         totalCost: record.totalCost,
@@ -259,6 +272,14 @@ async function searchUsers(
   limit: number
 ): Promise<SearchResult[]> {
   try {
+    type UserWithOrgsAndCount = Prisma.UserGetPayload<{
+      include: {
+        organizations: {
+          include: { organization: { select: { name: true } } }
+        }
+        _count: { select: { apiKeys: true } }
+      }
+    }>
     const users = await prisma.user.findMany({
       where: {
         OR: [
@@ -272,12 +293,10 @@ async function searchUsers(
             organization: { select: { name: true } }
           }
         },
-        _count: {
-          select: { apiKeys: true }
-        }
+        _count: { select: { apiKeys: true } }
       },
       take: limit
-    })
+    }) as UserWithOrgsAndCount[]
 
     return users.map(user => ({
       type: 'user' as const,
@@ -304,6 +323,9 @@ async function searchOrganizations(
   limit: number
 ): Promise<SearchResult[]> {
   try {
+    type OrgWithCounts = Prisma.OrganizationGetPayload<{
+      include: { _count: { select: { projects: true; members: true } } }
+    }>
     const organizations = await prisma.organization.findMany({
       where: {
         OR: [
@@ -312,21 +334,16 @@ async function searchOrganizations(
         ]
       },
       include: {
-        _count: {
-          select: {
-            projects: true,
-            members: true
-          }
-        }
+        _count: { select: { projects: true, members: true } }
       },
       take: limit
-    })
+    }) as OrgWithCounts[]
 
     return organizations.map(org => ({
       type: 'organization' as const,
       id: org.id,
       title: org.name,
-      description: `${org.plan} plan - ${org._count.projects} project${org._count.projects !== 1 ? 's' : ''}`,
+      description: `${org.plan} plan - ${org._count.projects} project${org._count.projects === 1 ? '' : 's'}`,
       relevance: calculateRelevance(org.name, query),
       metadata: {
         slug: org.slug,
@@ -357,7 +374,6 @@ export async function getSearchSuggestions(
     const sanitizedQuery = partialQuery.trim()
 
     const [recentSearches, popularSearches] = await Promise.all([
-      // User's recent searches
       prisma.searchHistory.findMany({
         where: {
           userId,
@@ -375,8 +391,6 @@ export async function getSearchSuggestions(
         },
         take: 5
       }),
-
-      // Popular searches across all users (last 30 days)
       prisma.searchHistory.groupBy({
         by: ['query'],
         where: {
@@ -400,9 +414,14 @@ export async function getSearchSuggestions(
       })
     ])
 
-    // Combine and deduplicate suggestions
-    const recentQueries = recentSearches.map((s: any) => s.query)
-    const popularQueries = popularSearches.map((s: any) => s.query)
+    // Defensive: recentSearches is array of objects with .query
+    // popularSearches is array of groupBy objects { query, _count: { query: n } }
+    const recentQueries = Array.isArray(recentSearches)
+      ? (recentSearches as Array<{ query: string }>).map((s) => s.query)
+      : []
+    const popularQueries = Array.isArray(popularSearches)
+      ? (popularSearches as Array<{ query: string; _count: { query: number } }>).map((s) => s.query)
+      : []
 
     // Prioritize recent searches, then add popular ones
     const suggestions = [
@@ -413,10 +432,15 @@ export async function getSearchSuggestions(
     const uniqueSuggestions = Array.from(new Set(suggestions)).slice(0, 10)
 
     return { data: uniqueSuggestions }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error getting search suggestions:', error)
     return { error: 'Failed to get suggestions' }
   }
+}
+
+type SearchAnalyticsData = {
+  topSearches: Array<{ query: string; searchCount: number; avgResults: number }>
+  stats: { totalSearches: number; avgResultsPerSearch: number }
 }
 
 /**
@@ -425,16 +449,15 @@ export async function getSearchSuggestions(
 export async function getSearchAnalytics(
   userId: string,
   timeRange: string = '30D'
-): Promise<{ data?: any; error?: string }> {
+): Promise<{ data?: SearchAnalyticsData; error?: string }> {
   try {
-    if (!userId) {
+    if (!userId || typeof userId !== 'string' || userId.trim().length === 0) {
       return { error: 'User ID is required' }
     }
 
     const { startDate, endDate } = getTimeFilter(timeRange)
 
     const [topSearches, searchStats] = await Promise.all([
-      // Top searches by frequency
       prisma.searchHistory.groupBy({
         by: ['query'],
         where: {
@@ -458,7 +481,6 @@ export async function getSearchAnalytics(
         take: 20
       }),
 
-      // Overall statistics
       prisma.searchHistory.aggregate({
         where: {
           userId,
@@ -478,18 +500,20 @@ export async function getSearchAnalytics(
 
     return {
       data: {
-        topSearches: topSearches.map((search: any) => ({
-          query: search.query,
-          searchCount: search._count.id,
-          avgResults: Math.round(search._avg.resultCount || 0)
-        })),
+        topSearches: Array.isArray(topSearches)
+          ? (topSearches as Array<{ query: string; _count: { id: number }; _avg: { resultCount: number | null } }>).map((search) => ({
+            query: search.query,
+            searchCount: search._count.id,
+            avgResults: Math.round(typeof search._avg.resultCount === 'number' ? search._avg.resultCount : 0)
+          }))
+          : [],
         stats: {
           totalSearches: searchStats._count.id,
-          avgResultsPerSearch: Math.round(searchStats._avg.resultCount || 0)
+          avgResultsPerSearch: Math.round(typeof searchStats._avg.resultCount === 'number' ? searchStats._avg.resultCount : 0)
         }
       }
     }
-  } catch (error) {
+  } catch (error: unknown) {
     console.error('Error getting search analytics:', error)
     return { error: 'Failed to get search analytics' }
   }
