@@ -75,8 +75,59 @@ const chartData = {
 // COMPONENTS
 // ============================================
 
+// Type definitions
+interface StatCardProps {
+  title: string;
+  value: string;
+  change: string;
+  icon: React.ElementType;
+  isLoading: boolean;
+}
+
+interface ChartSkeletonProps {
+  height?: number;
+}
+
+interface CustomTooltipProps {
+  active?: boolean;
+  payload?: any[];
+  label?: string;
+}
+
+interface HeaderProps {
+  isExporting: boolean;
+  handleExport: () => void;
+  timeFilter: string;
+  setTimeFilter: (filter: string) => void;
+}
+
+interface StatsGridProps {
+  isLoading: boolean;
+}
+
+interface TabNavigationProps {
+  activeTab: string;
+  setActiveTab: (tab: string) => void;
+}
+
+interface OverviewTabProps {
+  isLoading: boolean;
+}
+
+interface UsageTabProps {
+  isLoading: boolean;
+}
+
+interface ClientsTabProps {
+  isLoading: boolean;
+}
+
+interface CostsTabProps {
+  isLoading: boolean;
+}
+
 // Chart Skeleton Loading Component
-const ChartSkeleton = ({ height = 300 }) => (
+const ChartSkeleton = ({ height = 300 }: ChartSkeletonProps) => (
   <div className="w-full bg-slate-50 rounded-lg flex items-center justify-center" style={{ height }}>
     <div className="flex flex-col items-center gap-3">
       <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -86,7 +137,7 @@ const ChartSkeleton = ({ height = 300 }) => (
 );
 
 // Stat Card Component
-const StatCard = ({ title, value, change, icon: Icon, isLoading }) => {
+const StatCard = ({ title, value, change, icon: Icon, isLoading }: StatCardProps) => {
   if (isLoading) {
     return (
       <div className="bg-white border border-slate-200 rounded-lg p-6">
@@ -114,7 +165,7 @@ const StatCard = ({ title, value, change, icon: Icon, isLoading }) => {
 };
 
 // Custom Tooltip Component
-const CustomTooltip = ({ active, payload, label }) => {
+const CustomTooltip = ({ active, payload, label }: CustomTooltipProps) => {
   if (active && payload && payload.length) {
     return (
       <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
@@ -131,7 +182,7 @@ const CustomTooltip = ({ active, payload, label }) => {
 };
 
 // Header Component
-const Header = ({ isExporting, handleExport, timeFilter, setTimeFilter }) => (
+const Header = ({ isExporting, handleExport, timeFilter, setTimeFilter }: HeaderProps) => (
   <div className="flex flex-col gap-4 mb-8">
     <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div>
@@ -183,7 +234,7 @@ const Header = ({ isExporting, handleExport, timeFilter, setTimeFilter }) => (
 );
 
 // Stats Grid Component
-const StatsGrid = ({ isLoading }) => (
+const StatsGrid = ({ isLoading }: StatsGridProps) => (
   <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
     <StatCard title="Total Tokens" value="7.2M" change="+18%" icon={Database} isLoading={isLoading} />
     <StatCard title="Active Clients" value="1,248" change="+12%" icon={Users} isLoading={isLoading} />
@@ -193,7 +244,7 @@ const StatsGrid = ({ isLoading }) => (
 );
 
 // Tab Navigation Component
-const TabNavigation = ({ activeTab, setActiveTab }) => (
+const TabNavigation = ({ activeTab, setActiveTab }: TabNavigationProps) => (
   <div className="bg-white border border-slate-200 rounded-lg p-1 inline-flex gap-1">
     {['overview', 'usage', 'clients', 'costs'].map((tab) => (
       <button
@@ -210,7 +261,7 @@ const TabNavigation = ({ activeTab, setActiveTab }) => (
 );
 
 // Overview Tab Component
-const OverviewTab = ({ isLoading }) => {
+const OverviewTab = ({ isLoading }: OverviewTabProps) => {
   const [chartsLoaded, setChartsLoaded] = useState({
     main: false,
     model: false,
@@ -333,7 +384,7 @@ const OverviewTab = ({ isLoading }) => {
 };
 
 // Usage Tab Component
-const UsageTab = ({ isLoading }) => {
+const UsageTab = ({ isLoading }: UsageTabProps) => {
   const [chartLoaded, setChartLoaded] = useState(false);
 
   useEffect(() => {
@@ -367,7 +418,7 @@ const UsageTab = ({ isLoading }) => {
 };
 
 // Clients Tab Component
-const ClientsTab = ({ isLoading }) => {
+const ClientsTab = ({ isLoading }: ClientsTabProps) => {
   const [chartsLoaded, setChartsLoaded] = useState({
     activity: false,
     reliability: false
@@ -443,7 +494,7 @@ const ClientsTab = ({ isLoading }) => {
 };
 
 // Costs Tab Component
-const CostsTab = ({ isLoading }) => {
+const CostsTab = ({ isLoading }: CostsTabProps) => {
   const [chartLoaded, setChartLoaded] = useState(false);
 
   useEffect(() => {

@@ -1,5 +1,5 @@
 // components/dashboard/RecentActivity.tsx
-import { Card } from '@/components/ui/Card';
+import { Card, CardHeader, CardContent } from '@/components/ui/Card';
 import { Badge } from '@/components/ui/Badge';
 import { User, ShoppingCart, DollarSign, FileText } from 'lucide-react';
 
@@ -29,7 +29,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
 
   const getBadgeVariant = (type: string) => {
     switch (type) {
-      case 'user': return 'info';
+      case 'user': return 'primary';
       case 'order': return 'success';
       case 'payment': return 'warning';
       case 'document': return 'default';
@@ -38,15 +38,18 @@ export function RecentActivity({ activities }: RecentActivityProps) {
   };
 
   return (
-    <Card padding="lg">
-      <div className="flex items-center justify-between mb-6">
-        <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
-        <button className="text-sm text-blue-600 hover:text-blue-500 font-medium">
-          View all
-        </button>
-      </div>
+    <Card>
+      <CardHeader>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-gray-900">Recent Activity</h3>
+          <button className="text-sm text-blue-600 hover:text-blue-500 font-medium">
+            View all
+          </button>
+        </div>
+      </CardHeader>
       
-      <div className="space-y-4">
+      <CardContent>
+        <div className="space-y-4">
         {activities.map((activity) => {
           const Icon = getIcon(activity.type);
           return (
@@ -82,7 +85,8 @@ export function RecentActivity({ activities }: RecentActivityProps) {
             </div>
           );
         })}
-      </div>
+        </div>
+      </CardContent>
     </Card>
   );
 }

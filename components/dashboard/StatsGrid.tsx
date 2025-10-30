@@ -23,7 +23,7 @@ export function StatsGrid({ stats }: StatsGridProps) {
       {stats.map((stat, index) => {
         const Icon = stat.icon;
         return (
-          <Card key={index} padding="lg" hover>
+          <Card key={index} className="p-6">
             <div className="flex items-center">
               <div className="flex-shrink-0">
                 <div className="p-3 bg-blue-100 rounded-lg">
