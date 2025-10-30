@@ -1,9 +1,4 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
-
-// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
-// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
-
+// schema.prisma
 generator client {
   provider = "prisma-client-js"
 }
@@ -13,25 +8,39 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+// ============================================
+// AUTHENTICATION MODELS 
+// ============================================
+
 model User {
-  id            String    @id
+  id            String    @id @default(cuid())
   name          String
-  email         String
+  email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
   createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @default(now()) @updatedAt
+  updatedAt     DateTime  @updatedAt
+  
+  // Authentication relations
   sessions      Session[]
   accounts      Account[]
+  
+  // Analytics dashboard relations
+  role          UserRole            @default(VIEWER)
+  organizations OrganizationMember[]
+  apiKeys       ApiKey[]
+  auditLogs     AuditLog[]
+  searchHistory SearchHistory[]
+  insights      Insight[] // Add missing back relation for Insight
 
-  @@unique([email])
-  @@map("user")
+  @@index([name, email])
+  @@map("users")
 }
 
 model Session {
-  id        String   @id
+  id        String   @id @default(cuid())
   expiresAt DateTime
-  token     String
+  token     String   @unique
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
@@ -39,12 +48,11 @@ model Session {
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
-  @@unique([token])
-  @@map("session")
+  @@map("sessions")
 }
 
 model Account {
-  id                    String    @id
+  id                    String    @id @default(cuid())
   accountId             String
   providerId            String
   userId                String
@@ -59,16 +67,315 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
-  @@map("account")
+  @@map("accounts")
 }
 
 model Verification {
-  id         String   @id
+  id         String   @id @default(cuid())
   identifier String
   value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
   updatedAt  DateTime @default(now()) @updatedAt
 
-  @@map("verification")
+  @@map("verifications")
+}
+
+// ============================================
+// ANALYTICS DASHBOARD MODELS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+model Organization {
+  id          String   @id @default(cuid())
+  name        String
+  slug        String   @unique
+  plan        PlanType @default(STARTER)
+  isActive    Boolean  @default(true)
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  members     OrganizationMember[]
+  projects    Project[]
+  apiKeys     ApiKey[]
+  
+  @@index([name, slug])
+  @@map("organizations")
+}
+
+model OrganizationMember {
+  id             String   @id @default(cuid())
+  role           OrganizationRole @default(MEMBER)
+  joinedAt       DateTime @default(now())
+  
+  // Relations
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@unique([userId, organizationId])
+  @@map("organization_members")
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum PlanType {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+model Project {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?
+  isActive       Boolean  @default(true)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  usageMetrics   UsageMetric[]
+  costRecords    CostRecord[]
+  apiKeys        ApiKey[]
+  clientActivity ClientActivity[]
+  platformPerformance PlatformPerformance[]
+  insights       Insight[]
+  auditLogs      AuditLog[] // Add missing back relation for AuditLog
+
+  @@index([name, organizationId])
+  @@index([createdAt])
+  @@map("projects")
+}
+
+model ApiKey {
+  id             String   @id @default(cuid())
+  name           String
+  key            String   @unique
+  prefix         String
+  permissions    Json
+  rateLimit      Int      @default(1000)
+  isActive       Boolean  @default(true)
+  lastUsed       DateTime?
+  expiresAt      DateTime?
+  createdAt      DateTime @default(now())
+  
+  // Relations
+  userId         String
+  user           User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  projectId      String?
+  project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  usageMetrics   UsageMetric[]
+  
+  @@map("api_keys")
+}
+
+model AiModel {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  provider    String
+  modelFamily String
+  contextSize Int
+  isActive    Boolean  @default(true)
+  costPer1kTokens Float
+  capabilities Json
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  usageMetrics UsageMetric[]
+  costRecords  CostRecord[]
+  
+  @@map("ai_models")
+}
+
+model UsageMetric {
+  id          String   @id @default(cuid())
+  timestamp   DateTime @default(now())
+  period      Period   @default(HOURLY)
+  
+  // Metrics
+  tokenCount  Int
+  promptTokens Int
+  completionTokens Int
+  requestCount Int
+  userCount   Int
+  cost        Float
+  
+  // Metadata
+  endpoint    String?
+  statusCode  Int?
+  userId      String?
+  
+  // Relations
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  modelId     String
+  model       AiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  apiKeyId    String?
+  apiKey      ApiKey? @relation(fields: [apiKeyId], references: [id], onDelete: SetNull)
+  
+  // Indexes
+  @@index([timestamp])
+  @@index([projectId, timestamp])
+  @@index([modelId, timestamp])
+  @@index([apiKeyId, timestamp])
+  @@index([cost])
+  @@index([tokenCount])
+  @@map("usage_metrics")
+}
+
+enum Period {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+model CostRecord {
+  id          String   @id @default(cuid())
+  period      DateTime
+  periodType  Period   @default(MONTHLY)
+  
+  // Cost breakdown
+  developmentCost Float
+  inferenceCost   Float
+  maintenanceCost Float
+  totalCost       Float
+  
+  // Metadata
+  notes       String?
+  
+  // Relations
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  modelId     String
+  model       AiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, modelId, period])
+  @@index([period])
+  @@map("cost_records")
+}
+
+model PlatformPerformance {
+  id           String   @id @default(cuid())
+  timestamp    DateTime @default(now())
+  platform     String
+  uptime       Float
+  reliability  Float
+  avgResponseTime Float
+  errorRate    Float
+  rateLimitRemaining Int?
+  
+  // Relations
+  projectId    String?
+  project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([timestamp, platform])
+  @@map("platform_performance")
+}
+
+model ClientActivity {
+  id          String   @id @default(cuid())
+  date        DateTime @default(now())
+  period      Period   @default(DAILY)
+  requests    Int
+  tokens      Int
+  activeUsers Int
+  newUsers    Int
+  
+  // Relations
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@unique([projectId, date, period])
+  @@index([date])
+  @@map("client_activity")
+}
+
+model Insight {
+  id          String     @id @default(cuid())
+  title       String
+  description String
+  type        InsightType
+  priority    Priority   @default(MEDIUM)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  expiresAt   DateTime?
+  conditions  Json
+  actions     Json
+  
+  // Relations
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  @@map("insights")
+}
+
+enum InsightType {
+  COST_OPTIMIZATION
+  PERFORMANCE
+  USAGE_PATTERN
+  SECURITY
+  RELIABILITY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+model SearchHistory {
+  id          String   @id @default(cuid())
+  query       String
+  filters     Json?
+  resultCount Int
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  createdAt   DateTime @default(now())
+  
+  @@index([query, userId])
+  @@index([createdAt])
+  @@map("search_history")
+}
+
+model AuditLog {
+  id          String   @id @default(cuid())
+  action      String
+  resource    String
+  resourceId  String?
+  details     Json?
+  ipAddress   String?
+  userAgent   String?
+  timestamp   DateTime @default(now())
+  
+  // Relations
+  userId      String?
+  user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  projectId   String?
+  project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
+
+  @@index([timestamp])
+  @@index([action, timestamp])
+  @@map("audit_logs")
 }

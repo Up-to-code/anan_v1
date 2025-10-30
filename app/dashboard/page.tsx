@@ -1,120 +1,558 @@
 "use client";
-import React from 'react';
-import { AppLayout } from '@/components/layout/AppLayout';
-import { PageHeader } from '@/components/layout/PageHeader';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
-import { Button } from '@/components/ui/Button';
-import { Badge } from '@/components/ui/Badge';
-import { Progress } from '@/components/ui/Progress';
-import { 
-  BarChart3, 
-  Users, 
-  ShoppingCart, 
+import React, { useState, useEffect } from 'react';
+import {
+  BarChart,
+  Bar,
+  LineChart,
+  Line,
+  PieChart,
+  Pie,
+  Cell,
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer,
+} from 'recharts';
+import {
+  Users,
+  Zap,
+  Brain,
+  MessageCircle,
+  Database,
+  CreditCard,
+  Loader2,
   TrendingUp,
+  Shield,
   Download,
-  Plus
 } from 'lucide-react';
 
-export default function DashboardPage() {
-  const stats = [
-    { name: 'Total Revenue', value: '$45,231.89', change: '+20.1%', changeType: 'positive' },
-    { name: 'New Customers', value: '2,345', change: '+18.1%', changeType: 'positive' },
-    { name: 'Active Users', value: '12,543', change: '-2.1%', changeType: 'negative' },
-    { name: 'Conversion Rate', value: '3.2%', change: '+1.2%', changeType: 'positive' },
-  ];
+// ============================================
+// DATA
+// ============================================
+const chartData = {
+  tokenUsage: [
+    { month: 'Jan', tokens: 400000, cost: 12000 },
+    { month: 'Feb', tokens: 300000, cost: 9000 },
+    { month: 'Mar', tokens: 500000, cost: 15000 },
+    { month: 'Apr', tokens: 450000, cost: 13500 },
+    { month: 'May', tokens: 600000, cost: 18000 },
+    { month: 'Jun', tokens: 550000, cost: 16500 },
+  ],
+  modelUsage: [
+    { name: 'GPT-4', tokens: 450000, color: '#3b82f6' },
+    { name: 'Claude-3', tokens: 320000, color: '#60a5fa' },
+    { name: 'Llama-2', tokens: 280000, color: '#93c5fd' },
+    { name: 'Gemini', tokens: 195000, color: '#bfdbfe' },
+  ],
+  clientActivity: [
+    { day: 'Mon', requests: 1200, tokens: 45000, activeUsers: 450 },
+    { day: 'Tue', requests: 1900, tokens: 72000, activeUsers: 620 },
+    { day: 'Wed', requests: 1500, tokens: 58000, activeUsers: 510 },
+    { day: 'Thu', requests: 2100, tokens: 89000, activeUsers: 730 },
+    { day: 'Fri', requests: 1800, tokens: 67000, activeUsers: 680 },
+    { day: 'Sat', requests: 900, tokens: 34000, activeUsers: 320 },
+    { day: 'Sun', requests: 800, tokens: 31000, activeUsers: 290 },
+  ],
+  platformPerformance: [
+    { platform: 'OpenAI', uptime: 99.9, reliability: 98.5 },
+    { platform: 'Anthropic', uptime: 99.8, reliability: 97.8 },
+    { platform: 'Meta', uptime: 99.5, reliability: 95.2 },
+    { platform: 'Google', uptime: 99.7, reliability: 96.8 },
+  ],
+  costAnalysis: [
+    { model: 'GPT-4', development: 15000, inference: 45000, maintenance: 8000 },
+    { model: 'Claude-3', development: 12000, inference: 32000, maintenance: 6000 },
+    { model: 'Llama-2', development: 18000, inference: 28000, maintenance: 5000 },
+    { model: 'Gemini', development: 10000, inference: 19500, maintenance: 4500 },
+  ],
+};
+
+// ============================================
+// COMPONENTS
+// ============================================
+
+// Chart Skeleton Loading Component
+const ChartSkeleton = ({ height = 300 }) => (
+  <div className="w-full bg-slate-50 rounded-lg flex items-center justify-center" style={{ height }}>
+    <div className="flex flex-col items-center gap-3">
+      <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
+      <p className="text-sm text-slate-500">Loading chart...</p>
+    </div>
+  </div>
+);
+
+// Stat Card Component
+const StatCard = ({ title, value, change, icon: Icon, isLoading }) => {
+  if (isLoading) {
+    return (
+      <div className="bg-white border border-slate-200 rounded-lg p-6">
+        <div className="h-4 bg-slate-100 rounded w-24 mb-4"></div>
+        <div className="h-8 bg-slate-100 rounded w-20 mb-2"></div>
+        <div className="h-3 bg-slate-100 rounded w-32"></div>
+      </div>
+    );
+  }
 
   return (
-    <AppLayout>
-      <PageHeader
-        title="Dashboard"
-        description="Welcome back! Here's what's happening with your business today."
-        actions={
-          <>
-            <Button variant="outline" leftIcon={<Download className="w-4 h-4" />}>
-              Export
-            </Button>
-            <Button leftIcon={<Plus className="w-4 h-4" />}>
-              New Project
-            </Button>
-          </>
-        }
-      />
+    <div className="bg-white border border-slate-200 rounded-lg p-6">
+      <div className="flex items-center justify-between mb-2">
+        <p className="text-sm font-medium text-slate-600">{title}</p>
+        <Icon className="w-5 h-5 text-blue-500" />
+      </div>
+      <div className="text-3xl font-bold text-slate-900 mb-1">{value}</div>
+      <div className="flex items-center text-sm">
+        <TrendingUp className="w-4 h-4 text-blue-500 mr-1" />
+        <span className="text-blue-600 font-medium">{change}</span>
+        <span className="text-slate-500 ml-1">from last month</span>
+      </div>
+    </div>
+  );
+};
 
-      {/* Stats Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-        {stats.map((stat, index) => (
-          <Card key={index} hover>
-            <CardContent className="p-6">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="text-sm font-medium text-slate-600">{stat.name}</p>
-                  <p className="text-2xl font-bold text-slate-900 mt-1">{stat.value}</p>
-                </div>
-                <div className={`flex items-center ${stat.changeType === 'positive' ? 'text-green-600' : 'text-red-600'}`}>
-                  <TrendingUp className="w-4 h-4 mr-1" />
-                  <span className="text-sm font-medium">{stat.change}</span>
-                </div>
-              </div>
-              <Progress value={75} size="sm" className="mt-4" />
-            </CardContent>
-          </Card>
+// Custom Tooltip Component
+const CustomTooltip = ({ active, payload, label }) => {
+  if (active && payload && payload.length) {
+    return (
+      <div className="bg-white p-4 border border-slate-200 rounded-lg shadow-lg">
+        <p className="font-semibold text-slate-900 mb-2">{label}</p>
+        {payload.map((entry, index) => (
+          <p key={index} className="text-sm" style={{ color: entry.color }}>
+            {entry.name}: {entry.value.toLocaleString()}
+          </p>
         ))}
       </div>
+    );
+  }
+  return null;
+};
 
-      {/* Additional Content */}
+// Header Component
+const Header = ({ isExporting, handleExport, timeFilter, setTimeFilter }) => (
+  <div className="flex flex-col gap-4 mb-8">
+    <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+      <div>
+        <h1 className="text-4xl font-bold text-slate-900">AI Analytics Dashboard</h1>
+        <p className="text-slate-600 mt-2">
+          Real-time monitoring of token usage, costs, and performance
+        </p>
+      </div>
+      <div className="flex items-center gap-3">
+        <button
+          onClick={handleExport}
+          disabled={isExporting}
+          className="px-4 py-2 border border-slate-300 rounded-lg bg-white text-slate-700 flex items-center gap-2 disabled:opacity-50"
+        >
+          {isExporting ? (
+            <Loader2 className="w-4 h-4 animate-spin" />
+          ) : (
+            <Download className="w-4 h-4" />
+          )}
+          {isExporting ? 'Exporting...' : 'Export'}
+        </button>
+        <button className="px-4 py-2 bg-blue-600 text-white rounded-lg flex items-center gap-2">
+          <Zap className="w-4 h-4" />
+          New Analysis
+        </button>
+      </div>
+    </div>
+    
+    {/* Time Filter */}
+    <div className="flex items-center gap-3">
+      <span className="text-sm font-medium text-slate-700">Time Range:</span>
+      <div className="flex gap-2">
+        {['7D', '30D', '3M', '6M', '1Y', 'All'].map((period) => (
+          <button
+            key={period}
+            onClick={() => setTimeFilter(period)}
+            className={`px-4 py-2 rounded-lg text-sm font-medium ${
+              timeFilter === period
+                ? 'bg-blue-600 text-white'
+                : 'bg-white border border-slate-300 text-slate-700'
+            }`}
+          >
+            {period}
+          </button>
+        ))}
+      </div>
+    </div>
+  </div>
+);
+
+// Stats Grid Component
+const StatsGrid = ({ isLoading }) => (
+  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <StatCard title="Total Tokens" value="7.2M" change="+18%" icon={Database} isLoading={isLoading} />
+    <StatCard title="Active Clients" value="1,248" change="+12%" icon={Users} isLoading={isLoading} />
+    <StatCard title="API Requests" value="92.4K" change="+24%" icon={MessageCircle} isLoading={isLoading} />
+    <StatCard title="Total Cost" value="$24.8K" change="+8%" icon={CreditCard} isLoading={isLoading} />
+  </div>
+);
+
+// Tab Navigation Component
+const TabNavigation = ({ activeTab, setActiveTab }) => (
+  <div className="bg-white border border-slate-200 rounded-lg p-1 inline-flex gap-1">
+    {['overview', 'usage', 'clients', 'costs'].map((tab) => (
+      <button
+        key={tab}
+        onClick={() => setActiveTab(tab)}
+        className={`px-6 py-2 rounded-md font-medium ${
+          activeTab === tab ? 'bg-blue-600 text-white' : 'text-slate-600'
+        }`}
+      >
+        {tab.charAt(0).toUpperCase() + tab.slice(1)}
+      </button>
+    ))}
+  </div>
+);
+
+// Overview Tab Component
+const OverviewTab = ({ isLoading }) => {
+  const [chartsLoaded, setChartsLoaded] = useState({
+    main: false,
+    model: false,
+    activity: false
+  });
+
+  useEffect(() => {
+    if (!isLoading) {
+      const timers = [
+        setTimeout(() => setChartsLoaded(prev => ({ ...prev, main: true })), 100),
+        setTimeout(() => setChartsLoaded(prev => ({ ...prev, model: true })), 300),
+        setTimeout(() => setChartsLoaded(prev => ({ ...prev, activity: true })), 500),
+      ];
+      return () => timers.forEach(timer => clearTimeout(timer));
+    }
+  }, [isLoading]);
+
+  return (
+    <div className="space-y-6">
+      {/* Main Chart */}
+      <div className="bg-white border border-slate-200 rounded-lg p-6">
+        <div className="mb-6">
+          <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+            <TrendingUp className="w-5 h-5 text-blue-600" />
+            Monthly Token Usage & Cost
+          </h3>
+          <p className="text-sm text-slate-500 mt-1">Token consumption and costs over time</p>
+        </div>
+        {isLoading || !chartsLoaded.main ? (
+          <ChartSkeleton height={350} />
+        ) : (
+          <ResponsiveContainer width="100%" height={350}>
+            <BarChart data={chartData.tokenUsage}>
+              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={{ fill: '#64748b' }} />
+              <YAxis
+                yAxisId="left"
+                tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                tick={{ fill: '#64748b' }}
+              />
+              <YAxis
+                yAxisId="right"
+                orientation="right"
+                tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`}
+                tick={{ fill: '#64748b' }}
+              />
+              <Tooltip content={<CustomTooltip />} />
+              <Legend />
+              <Bar yAxisId="left" dataKey="tokens" fill="#3b82f6" name="Tokens" radius={[4, 4, 0, 0]} />
+              <Line
+                yAxisId="right"
+                type="monotone"
+                dataKey="cost"
+                stroke="#ef4444"
+                strokeWidth={3}
+                name="Cost (USD)"
+                dot={{ fill: '#ef4444', r: 4 }}
+              />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
+      </div>
+
+      {/* Two Column Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold">Recent Activity</h3>
-          </CardHeader>
-          <CardContent>
+        {/* Model Distribution */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Model Distribution</h3>
+            <p className="text-sm text-slate-500 mt-1">Token usage by AI model</p>
+          </div>
+          {isLoading || !chartsLoaded.model ? (
+            <ChartSkeleton height={280} />
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <PieChart>
+                <Pie
+                  data={chartData.modelUsage}
+                  cx="50%"
+                  cy="50%"
+                  labelLine={true}
+                  label={({ name, percent }) => `${name} (${(percent * 100).toFixed(1)}%)`}
+                  outerRadius={90}
+                  innerRadius={50}
+                  dataKey="tokens"
+                >
+                  {chartData.modelUsage.map((entry, index) => (
+                    <Cell key={`cell-${index}`} fill={entry.color} />
+                  ))}
+                </Pie>
+                <Tooltip />
+              </PieChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Weekly Activity */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Weekly Activity</h3>
+            <p className="text-sm text-slate-500 mt-1">Requests throughout the week</p>
+          </div>
+          {isLoading || !chartsLoaded.activity ? (
+            <ChartSkeleton height={280} />
+          ) : (
+            <ResponsiveContainer width="100%" height={280}>
+              <AreaChart data={chartData.clientActivity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="day" tick={{ fill: '#64748b' }} />
+                <YAxis tick={{ fill: '#64748b' }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Area type="monotone" dataKey="requests" stroke="#3b82f6" fill="#3b82f6" fillOpacity={0.2} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+// Usage Tab Component
+const UsageTab = ({ isLoading }) => {
+  const [chartLoaded, setChartLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => setChartLoaded(true), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-6">
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-slate-900">Detailed Token Usage</h3>
+        <p className="text-sm text-slate-500 mt-1">Comprehensive usage patterns over time</p>
+      </div>
+      {isLoading || !chartLoaded ? (
+        <ChartSkeleton height={400} />
+      ) : (
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={chartData.tokenUsage}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="month" tick={{ fill: '#64748b' }} />
+            <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`} tick={{ fill: '#64748b' }} />
+            <Tooltip content={<CustomTooltip />} />
+            <Bar dataKey="tokens" fill="#3b82f6" radius={[8, 8, 0, 0]} />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+};
+
+// Clients Tab Component
+const ClientsTab = ({ isLoading }) => {
+  const [chartsLoaded, setChartsLoaded] = useState({
+    activity: false,
+    reliability: false
+  });
+
+  useEffect(() => {
+    if (!isLoading) {
+      const timers = [
+        setTimeout(() => setChartsLoaded(prev => ({ ...prev, activity: true })), 200),
+        setTimeout(() => setChartsLoaded(prev => ({ ...prev, reliability: true })), 400),
+      ];
+      return () => timers.forEach(timer => clearTimeout(timer));
+    }
+  }, [isLoading]);
+
+  return (
+    <div className="space-y-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        {/* Client Activity Chart */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900">Client Activity</h3>
+            <p className="text-sm text-slate-500 mt-1">API requests and active users by day</p>
+          </div>
+          {isLoading || !chartsLoaded.activity ? (
+            <ChartSkeleton height={300} />
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <BarChart data={chartData.clientActivity}>
+                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <XAxis dataKey="day" tick={{ fill: '#64748b' }} />
+                <YAxis tick={{ fill: '#64748b' }} />
+                <Tooltip content={<CustomTooltip />} />
+                <Legend />
+                <Bar dataKey="requests" fill="#3b82f6" radius={[4, 4, 0, 0]} />
+                <Bar dataKey="activeUsers" fill="#60a5fa" radius={[4, 4, 0, 0]} />
+              </BarChart>
+            </ResponsiveContainer>
+          )}
+        </div>
+
+        {/* Platform Reliability */}
+        <div className="bg-white border border-slate-200 rounded-lg p-6">
+          <div className="mb-6">
+            <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+              <Shield className="w-5 h-5 text-blue-600" />
+              Platform Reliability
+            </h3>
+            <p className="text-sm text-slate-500 mt-1">Uptime metrics across platforms</p>
+          </div>
+          {isLoading || !chartsLoaded.reliability ? (
+            <ChartSkeleton height={300} />
+          ) : (
             <div className="space-y-4">
-              {[
-                { action: 'New customer registration', user: 'John Doe', time: '2 minutes ago' },
-                { action: 'Subscription upgrade', user: 'Sarah Smith', time: '1 hour ago' },
-                { action: 'Support ticket resolved', user: 'Mike Johnson', time: '2 hours ago' },
-              ].map((activity, index) => (
-                <div key={index} className="flex items-center space-x-4 p-3 border border-slate-200 rounded-lg">
-                  <div className="w-2 h-2 bg-blue-600 rounded-full"></div>
-                  <div className="flex-1">
-                    <p className="font-medium text-slate-900">{activity.action}</p>
-                    <p className="text-sm text-slate-600">by {activity.user}</p>
+              {chartData.platformPerformance.map((platform, idx) => (
+                <div key={idx} className="flex items-center justify-between p-4 bg-slate-50 rounded-lg">
+                  <div className="flex items-center gap-3">
+                    <div
+                      className="w-3 h-3 rounded-full"
+                      style={{ backgroundColor: platform.uptime >= 99.8 ? '#3b82f6' : '#60a5fa' }}
+                    />
+                    <span className="font-medium text-slate-900">{platform.platform}</span>
                   </div>
-                  <Badge variant="outline" size="sm">
-                    {activity.time}
-                  </Badge>
+                  <span className="text-sm font-semibold text-blue-600">{platform.uptime}% uptime</span>
                 </div>
               ))}
             </div>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader>
-            <h3 className="text-lg font-semibold">Quick Actions</h3>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-2 gap-4">
-              <Button variant="outline" className="h-16 flex-col">
-                <Users className="w-6 h-6 mb-1" />
-                <span>Customers</span>
-              </Button>
-              <Button variant="outline" className="h-16 flex-col">
-                <ShoppingCart className="w-6 h-6 mb-1" />
-                <span>Orders</span>
-              </Button>
-              <Button variant="outline" className="h-16 flex-col">
-                <BarChart3 className="w-6 h-6 mb-1" />
-                <span>Analytics</span>
-              </Button>
-              <Button variant="outline" className="h-16 flex-col">
-                <Plus className="w-6 h-6 mb-1" />
-                <span>New Item</span>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+          )}
+        </div>
       </div>
-    </AppLayout>
+    </div>
+  );
+};
+
+// Costs Tab Component
+const CostsTab = ({ isLoading }) => {
+  const [chartLoaded, setChartLoaded] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading) {
+      const timer = setTimeout(() => setChartLoaded(true), 200);
+      return () => clearTimeout(timer);
+    }
+  }, [isLoading]);
+
+  return (
+    <div className="bg-white border border-slate-200 rounded-lg p-6">
+      <div className="mb-6">
+        <h3 className="text-lg font-semibold text-slate-900">Cost Breakdown by Model</h3>
+        <p className="text-sm text-slate-500 mt-1">Development, inference, and maintenance costs</p>
+      </div>
+      {isLoading || !chartLoaded ? (
+        <ChartSkeleton height={400} />
+      ) : (
+        <ResponsiveContainer width="100%" height={400}>
+          <BarChart data={chartData.costAnalysis}>
+            <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+            <XAxis dataKey="model" tick={{ fill: '#64748b' }} />
+            <YAxis tickFormatter={(value) => `${(value / 1000).toFixed(0)}K`} tick={{ fill: '#64748b' }} />
+            <Tooltip />
+            <Legend />
+            <Bar dataKey="development" stackId="cost" fill="#3b82f6" />
+            <Bar dataKey="inference" stackId="cost" fill="#60a5fa" />
+            <Bar dataKey="maintenance" stackId="cost" fill="#93c5fd" />
+          </BarChart>
+        </ResponsiveContainer>
+      )}
+    </div>
+  );
+};
+
+// AI Insights Component
+const AIInsights = () => (
+  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
+    <div className="mb-6">
+      <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
+        <Brain className="w-5 h-5 text-blue-600" />
+        AI Insights & Recommendations
+      </h3>
+      <p className="text-sm text-slate-500 mt-1">Automated recommendations based on usage patterns</p>
+    </div>
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+      <div className="bg-white border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-slate-900 mb-2">Optimize Usage</h4>
+        <p className="text-sm text-slate-700">Switch to Claude-3 for text tasks to reduce costs by 15%</p>
+      </div>
+      <div className="bg-white border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-slate-900 mb-2">Peak Traffic</h4>
+        <p className="text-sm text-slate-700">High usage at 2-4 PM. Consider load balancing.</p>
+      </div>
+      <div className="bg-white border border-blue-200 rounded-lg p-4">
+        <h4 className="font-semibold text-slate-900 mb-2">Performance</h4>
+        <p className="text-sm text-slate-700">Llama-2 shows lower accuracy. Consider fine-tuning.</p>
+      </div>
+    </div>
+  </div>
+);
+
+// ============================================
+// MAIN COMPONENT
+// ============================================
+export default function Dashboard() {
+  const [isLoading, setIsLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState('overview');
+  const [isExporting, setIsExporting] = useState(false);
+  const [timeFilter, setTimeFilter] = useState('30D');
+
+  useEffect(() => {
+    const timer = setTimeout(() => setIsLoading(false), 1000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  useEffect(() => {
+    // Reload data when time filter changes
+    setIsLoading(true);
+    const timer = setTimeout(() => setIsLoading(false), 800);
+    return () => clearTimeout(timer);
+  }, [timeFilter]);
+
+  const handleExport = async () => {
+    setIsExporting(true);
+    await new Promise(resolve => setTimeout(resolve, 800));
+    alert('Report exported successfully!');
+    setIsExporting(false);
+  };
+
+  return (
+    <div className="min-h-screen bg-slate-50 p-6">
+      <div className="max-w-7xl mx-auto space-y-6">
+        <Header 
+          isExporting={isExporting} 
+          handleExport={handleExport}
+          timeFilter={timeFilter}
+          setTimeFilter={setTimeFilter}
+        />
+        <StatsGrid isLoading={isLoading} />
+        <TabNavigation activeTab={activeTab} setActiveTab={setActiveTab} />
+        
+        {activeTab === 'overview' && <OverviewTab isLoading={isLoading} />}
+        {activeTab === 'usage' && <UsageTab isLoading={isLoading} />}
+        {activeTab === 'clients' && <ClientsTab isLoading={isLoading} />}
+        {activeTab === 'costs' && <CostsTab isLoading={isLoading} />}
+        
+        <AIInsights />
+      </div>
+    </div>
   );
 }
