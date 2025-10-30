@@ -75,7 +75,7 @@ export function DashboardHeader({
                 <Input
                   type="search"
                   value=""
-                  onChange={(value) => onSearch?.(value)}
+                  onChange={(e) => onSearch?.(e.target.value)}
                   placeholder="Search..."
                   className="w-64 pl-10"
                 />
@@ -88,7 +88,7 @@ export function DashboardHeader({
             <Button
               variant="ghost"
               size="sm"
-              icon={Bell}
+              leftIcon={<Bell className="w-4 h-4" />}
               onClick={onNotificationsClick}
               className="text-gray-400 hover:text-gray-600 relative"
             >
@@ -110,8 +110,21 @@ export function DashboardHeader({
                   </div>
                 </button>
               }
-              items={userMenuItems}
-            />
+            >
+              {userMenuItems.map((item, idx) => (
+                item.type === 'separator' ? (
+                  <div key={idx} className="my-1 border-t border-slate-200" />
+                ) : (
+                  <button
+                    key={idx}
+                    onClick={item.onClick}
+                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100"
+                  >
+                    {item.label}
+                  </button>
+                )
+              ))}
+            </Dropdown>
           </div>
         </div>
       </div>

@@ -1,6 +1,7 @@
 // components/layout/SectionHeader.tsx
 import { Button } from '@/components/ui/Button';
 import { Plus, Filter, Download, Upload } from 'lucide-react';
+import React from 'react';
 
 interface SectionHeaderProps {
   title: string;
@@ -59,7 +60,7 @@ export function SectionHeader({
               <Button
                 onClick={action.onClick}
                 variant={action.variant || 'primary'}
-                icon={getIcon(action.icon)}
+                leftIcon={getIcon(action.icon) ? React.createElement(getIcon(action.icon)) : undefined}
               >
                 {action.label}
               </Button>

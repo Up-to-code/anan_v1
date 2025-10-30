@@ -1,7 +1,7 @@
 'use client'
 
 import React, { useMemo, useState } from 'react'
-import { HelpCircle, Mail, Calendar as CalendarIcon, ArrowUp, ArrowDown, Bug, Lightbulb } from 'lucide-react'
+import { HelpCircle, Calendar as CalendarIcon, ArrowUp, ArrowDown, Bug, Lightbulb } from 'lucide-react'
 
 type FeedbackItem = {
   id: string
@@ -9,7 +9,7 @@ type FeedbackItem = {
   description: string
   type: 'bug' | 'idea'
   votes: number
-  createdAt: Date
+  createdAt: string
 }
 
 export default function HelpCenterPage() {
@@ -19,8 +19,8 @@ export default function HelpCenterPage() {
   const [submitted, setSubmitted] = useState(false)
 
   const [items, setItems] = useState<FeedbackItem[]>([
-    { id: '1', title: 'Analytics CSV export', description: 'Allow export with custom date range.', type: 'idea', votes: 12, createdAt: new Date() },
-    { id: '2', title: 'Webhook retry on 5xx', description: 'Some failed webhooks do not retry.', type: 'bug', votes: 7, createdAt: new Date() },
+    { id: '1', title: 'Analytics CSV export', description: 'Allow export with custom date range.', type: 'idea', votes: 12, createdAt: '2024-01-01T00:00:00.000Z' },
+    { id: '2', title: 'Webhook retry on 5xx', description: 'Some failed webhooks do not retry.', type: 'bug', votes: 7, createdAt: '2024-01-02T00:00:00.000Z' },
   ])
 
   const [filter, setFilter] = useState<'all' | 'bug' | 'idea'>('all')
@@ -33,7 +33,7 @@ export default function HelpCenterPage() {
   const filtered = useMemo(() => {
     let list = items.filter(i => (filter === 'all' ? true : i.type === filter))
     if (sort === 'top') list = list.sort((a, b) => b.votes - a.votes)
-    else list = list.sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime())
+    else list = list.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
     return list
   }, [items, filter, sort])
 
@@ -45,7 +45,7 @@ export default function HelpCenterPage() {
     e.preventDefault()
     if (!newTitle.trim()) return
     setItems(prev => [
-      { id: crypto.randomUUID(), title: newTitle.trim(), description: newDesc.trim(), type: newType, votes: 0, createdAt: new Date() },
+      { id: crypto.randomUUID(), title: newTitle.trim(), description: newDesc.trim(), type: newType, votes: 0, createdAt: new Date().toISOString() },
       ...prev,
     ])
     setNewTitle('')

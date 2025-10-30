@@ -18,7 +18,7 @@ import {
   Database,
   Layers
 } from 'lucide-react';
-import { Sidebar } from './Sidebar';
+import { Sidebar, SidebarHeader, SidebarContent } from './Sidebar';
 import { DashboardHeader } from './DashboardHeader';
 import { useToast } from '@/components/ui/Toast';
 
@@ -92,8 +92,8 @@ export function DashboardLayout({ children, user, currentPage = 'dashboard' }: D
   const handleNavigation = (href: string) => {
     addToast({
       title: 'Navigation',
-      message: `Navigating to ${href}`,
-      type: 'info'
+      description: `Navigating to ${href}`,
+      variant: 'info'
     });
     setSidebarOpen(false);
   };
@@ -102,8 +102,8 @@ export function DashboardLayout({ children, user, currentPage = 'dashboard' }: D
     if (query.trim()) {
       addToast({
         title: 'Search',
-        message: `Searching for: ${query}`,
-        type: 'info'
+        description: `Searching for: ${query}`,
+        variant: 'info'
       });
     }
   };
@@ -111,16 +111,16 @@ export function DashboardLayout({ children, user, currentPage = 'dashboard' }: D
   const handleLogout = () => {
     addToast({
       title: 'Logout',
-      message: 'You have been logged out successfully',
-      type: 'success'
+      description: 'You have been logged out successfully',
+      variant: 'success'
     });
   };
 
   const headerActions = {
-    onNotificationsClick: () => addToast({ title: 'Notifications', message: 'Opening notifications', type: 'info' }),
-    onProfileClick: () => addToast({ title: 'Profile', message: 'Opening profile', type: 'info' }),
-    onSettingsClick: () => addToast({ title: 'Settings', message: 'Opening settings', type: 'info' }),
-    onHelpClick: () => addToast({ title: 'Help', message: 'Opening help', type: 'info' }),
+    onNotificationsClick: () => addToast({ title: 'Notifications', description: 'Opening notifications', variant: 'info' }),
+    onProfileClick: () => addToast({ title: 'Profile', description: 'Opening profile', variant: 'info' }),
+    onSettingsClick: () => addToast({ title: 'Settings', description: 'Opening settings', variant: 'info' }),
+    onHelpClick: () => addToast({ title: 'Help', description: 'Opening help', variant: 'info' }),
   };
 
   return (
@@ -144,12 +144,59 @@ export function DashboardLayout({ children, user, currentPage = 'dashboard' }: D
         role="dialog"
         aria-modal="true"
       >
-        <Sidebar
-          items={navigationItems}
-          user={user}
-          onNavigate={handleNavigation}
-          onLogout={handleLogout}
-        />
+        <Sidebar>
+          <SidebarHeader className="p-4">
+            <div className="flex items-center space-x-3">
+              <div className="h-10 w-10 rounded-full bg-slate-700 flex items-center justify-center text-slate-200">
+                {user.name.split(' ').map(n => n[0]).join('')}
+              </div>
+              <div>
+                <div className="font-medium text-slate-100">{user.name}</div>
+                <div className="text-xs text-slate-400">{user.email}</div>
+              </div>
+            </div>
+          </SidebarHeader>
+          <SidebarContent className="p-3 space-y-6">
+            {Object.keys(NAVIGATION_CONFIG).map((category) => (
+              <div key={category}>
+                <div className="px-2 text-xs uppercase tracking-wider text-slate-500 mb-2">{category}</div>
+                <nav className="space-y-1">
+                  {navigationItems.filter(n => n.category === category).map((item) => {
+                    const Icon = item.icon;
+                    const isActive = item.current;
+                    return (
+                      <button
+                        key={item.href}
+                        onClick={() => handleNavigation(item.href)}
+                        className={`w-full flex items-center px-3 py-2 rounded-md text-sm transition-colors ${
+                          isActive
+                            ? 'bg-slate-800 text-white'
+                            : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                        }`}
+                      >
+                        <Icon className="w-4 h-4 mr-3" />
+                        <span className="flex-1 text-left">{item.name}</span>
+                        {item.badge && (
+                          <span className="ml-auto inline-flex items-center justify-center rounded-full bg-slate-700 px-2 py-0.5 text-xs text-slate-200">
+                            {item.badge}
+                          </span>
+                        )}
+                      </button>
+                    );
+                  })}
+                </nav>
+              </div>
+            ))}
+            <div className="pt-4 border-t border-slate-700 mt-4">
+              <button
+                onClick={handleLogout}
+                className="w-full flex items-center px-3 py-2 rounded-md text-sm text-red-300 hover:bg-red-900/20 hover:text-red-200 transition-colors"
+              >
+                Logout
+              </button>
+            </div>
+          </SidebarContent>
+        </Sidebar>
       </div>
 
       {/* Main Content Area */}

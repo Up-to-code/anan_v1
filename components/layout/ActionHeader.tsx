@@ -73,7 +73,7 @@ export function ActionHeader({
                 key={index}
                 onClick={action.onClick}
                 variant="secondary"
-                icon={action.icon}
+                leftIcon={action.icon ? <action.icon className="w-4 h-4" /> : undefined}
               >
                 {action.label}
               </Button>
@@ -84,7 +84,7 @@ export function ActionHeader({
               <Button
                 onClick={primaryAction.onClick}
                 variant={primaryAction.variant || 'primary'}
-                icon={primaryAction.icon}
+                leftIcon={primaryAction.icon ? <primaryAction.icon className="w-4 h-4" /> : undefined}
               >
                 {primaryAction.label}
               </Button>
@@ -94,15 +94,20 @@ export function ActionHeader({
             {moreActions.length > 0 && (
               <Dropdown
                 trigger={
-                  <Button variant="secondary" icon={MoreVertical}>More</Button>
+                  <Button variant="secondary" leftIcon={<MoreVertical className="w-4 h-4" />}>More</Button>
                 }
-                items={moreActions.map(action => ({
-                  label: action.label,
-                  icon: action.icon,
-                  onClick: action.onClick,
-                  variant: action.variant === "danger" ? "danger" : "default"
-                }))}
-              />
+              >
+                {moreActions.map((action, idx) => (
+                  <button
+                    key={idx}
+                    onClick={action.onClick}
+                    className="w-full px-4 py-2 text-left text-sm text-slate-700 hover:bg-slate-100 flex items-center gap-2"
+                  >
+                    {action.icon && <action.icon className="w-4 h-4" />}
+                    {action.label}
+                  </button>
+                ))}
+              </Dropdown>
             )}
           </div>
         </div>
