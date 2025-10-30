@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 // components/dashboard/QuickActions.tsx
 import React from 'react';
-import { Card, CardContent, CardHeader } from '@/components/ui/Card';
+import { Card, CardContent, CardHeader } from '../ui/Card';
 
 
 interface QuickAction {
