@@ -5,6 +5,7 @@ import { ToastProvider } from "@/components/ui/Toast";
 import { SpeedInsights } from '@vercel/speed-insights/next';
 import PHProvider from "@/Providers/PostHogProvider";
 import { PostHogPageView } from "@/Providers/PostHogPageView";
+import { Suspense } from "react";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -35,7 +36,9 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </PHProvider>
-        <PostHogPageView />
+        <Suspense fallback={null}>
+          <PostHogPageView />
+        </Suspense>
         <SpeedInsights/>
       </body>
     </html>
