@@ -1,16 +1,11 @@
-import type { NextRequest } from 'next/server';
-import { GET as baseGET, POST as basePOST } from './router';
+import { createRouteHandler } from "uploadthing/next";
 
-export async function GET(req: NextRequest) {
-  console.debug('[UPLOADTHING][GET]', req.url);
-  return baseGET(req);
-}
+import { ourFileRouter } from "./core";
 
-export async function POST(req: NextRequest) {
-  const url = req.url;
-  const contentType = req.headers.get('content-type') || '';
-  console.debug('[UPLOADTHING][POST]', { url, contentType });
-  return basePOST(req);
-}
+// Export routes for Next App Router
+export const { GET, POST } = createRouteHandler({
+  router: ourFileRouter,
 
-
+  // Apply an (optional) custom config:
+  // config: { ... },
+});

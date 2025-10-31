@@ -3,6 +3,7 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SpeedInsights } from '@vercel/speed-insights/next';
+import PHProvider from './providers';
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -25,13 +26,15 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en"  data-theme="emailly">
+    <html lang="en" data-theme="emailly">
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        <ToastProvider>
-        {children}
-        </ToastProvider>
+        <PHProvider>
+          <ToastProvider>
+            {children}
+          </ToastProvider>
+        </PHProvider>
         <SpeedInsights/>
       </body>
     </html>
