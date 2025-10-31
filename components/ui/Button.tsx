@@ -23,8 +23,8 @@ export function Button({
   const baseClasses = 'inline-flex items-center justify-center font-medium rounded-lg transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed';
   
   const variantClasses = {
-    primary: 'bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500 shadow-sm hover:shadow-md',
-    secondary: 'bg-slate-200 text-slate-900 hover:bg-slate-300 focus:ring-slate-500 shadow-sm hover:shadow-md',
+    primary: 'bg-[#0064e0] text-white hover:bg-[#0082fb] focus:ring-[#0064e0]',
+    secondary: 'bg-slate-200 text-slate-900 hover:bg-slate-300 focus:ring-slate-500',
     outline: 'border border-slate-300 bg-white text-slate-700 hover:bg-slate-50 focus:ring-blue-500',
     ghost: 'bg-transparent text-slate-600 hover:bg-slate-100 focus:ring-slate-500',
     danger: 'bg-red-600 text-white hover:bg-red-700 focus:ring-red-500 shadow-sm hover:shadow-md'
