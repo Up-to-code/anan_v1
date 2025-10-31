@@ -3,8 +3,8 @@ import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
 import { ToastProvider } from "@/components/ui/Toast";
 import { SpeedInsights } from '@vercel/speed-insights/next';
-import PHProvider from './providers';
-
+import PHProvider from "@/Providers/PostHogProvider";
+import { PostHogPageView } from "@/Providers/PostHogPageView";
 const geistSans = Geist({
   variable: "--font-geist-sans",
   subsets: ["latin"],
@@ -35,6 +35,7 @@ export default function RootLayout({
             {children}
           </ToastProvider>
         </PHProvider>
+        <PostHogPageView />
         <SpeedInsights/>
       </body>
     </html>
