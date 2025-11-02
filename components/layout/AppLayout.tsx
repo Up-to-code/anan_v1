@@ -78,14 +78,14 @@ const defaultBreadcrumbs = [
   { label: 'Dashboard', href: '/dashboard' }
 ];
 
-// Navigation data (remove badge usage)
-const navigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: BarChart3, current: true },
-  { name: 'Agents', href: '/dashboard/agents', icon: AirVent, current: false },
-  { name: 'integrations', href: '/dashboard/integrations', icon: Code, current: false },
-  { name: 'Products', href: '/products', icon: Package, current: false },
-  { name: 'Contacts', href: '/dashboard/contacts', icon: User, current: false },
-  { name: 'Billing', href: '/dashboard/billing', icon: CreditCard, current: false },
+// Navigation data - dynamic based on current path
+const getNavigation = (currentPath: string) => [
+  { name: 'Dashboard', href: '/dashboard', icon: BarChart3, current: currentPath === '/dashboard' },
+  { name: 'Agents', href: '/dashboard/agents', icon: AirVent, current: currentPath === '/dashboard/agents' },
+  { name: 'Integrations', href: '/dashboard/integrations', icon: Code, current: currentPath === '/dashboard/integrations' },
+  { name: 'Products', href: '/products', icon: Package, current: currentPath === '/products' },
+  { name: 'Contacts', href: '/dashboard/contacts', icon: User, current: currentPath === '/dashboard/contacts' },
+  { name: 'Billing', href: '/dashboard/billing', icon: CreditCard, current: currentPath === '/dashboard/billing' },
 ];
 
 export function AppLayout({
@@ -94,8 +94,30 @@ export function AppLayout({
   breadcrumbs = defaultBreadcrumbs
 }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [currentPath, setCurrentPath] = useState('');
+  const [isLoading, setIsLoading] = useState(true);
 
   const toggleSidebar = () => setSidebarOpen((open) => !open);
+
+  // Update current path on mount and when pathname changes
+  React.useEffect(() => {
+    if (typeof window !== 'undefined') {
+      setCurrentPath(window.location.pathname);
+      setIsLoading(false);
+    }
+  }, []);
+
+  // Loading state
+  if (isLoading) {
+    return (
+      <div className="flex h-screen bg-slate-50 items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-blue-600 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-slate-600 font-medium">Loading...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ToastProvider>
@@ -106,6 +128,7 @@ export function AppLayout({
             sidebarOpen={sidebarOpen}
             onToggleSidebar={toggleSidebar}
             user={user}
+            currentPath={currentPath}
           />
 
           {/* Main Content */}
@@ -131,10 +154,12 @@ interface SidebarProps {
   sidebarOpen: boolean;
   onToggleSidebar: () => void;
   user: UserType;
+  currentPath: string;
 }
 
-function SidebarComponent({ sidebarOpen, onToggleSidebar, user }: SidebarProps) {
+function SidebarComponent({ sidebarOpen, onToggleSidebar, user, currentPath }: SidebarProps) {
   const { addToast } = useToast();
+  const navigation = getNavigation(currentPath);
 
   const handleUpgrade = () => {
     addToast({
@@ -189,7 +214,6 @@ function SidebarComponent({ sidebarOpen, onToggleSidebar, user }: SidebarProps) 
                   <Icon className={`w-5 h-5 ${item.current ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
                   <span className="font-medium">{item.name}</span>
                 </div>
-                {/* Remove badge rendering as navigation items do not use badge property */}
               </a>
             );
           })}
