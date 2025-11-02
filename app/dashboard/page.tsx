@@ -598,32 +598,7 @@ const CostsTab = ({ isLoading }: CostsTabProps) => {
   );
 };
 
-// AI Insights Component
-const AIInsights = () => (
-  <div className="bg-blue-50 border border-blue-200 rounded-lg p-6">
-    <div className="mb-6">
-      <h3 className="text-lg font-semibold text-slate-900 flex items-center gap-2">
-        <Brain className="w-5 h-5 text-blue-600" />
-        AI Insights & Recommendations
-      </h3>
-      <p className="text-sm text-slate-500 mt-1">Automated recommendations based on usage patterns</p>
-    </div>
-    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-      <div className="bg-white border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-slate-900 mb-2">Optimize Usage</h4>
-        <p className="text-sm text-slate-700">Switch to Claude-3 for text tasks to reduce costs by 15%</p>
-      </div>
-      <div className="bg-white border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-slate-900 mb-2">Peak Traffic</h4>
-        <p className="text-sm text-slate-700">High usage at 2-4 PM. Consider load balancing.</p>
-      </div>
-      <div className="bg-white border border-blue-200 rounded-lg p-4">
-        <h4 className="font-semibold text-slate-900 mb-2">Performance</h4>
-        <p className="text-sm text-slate-700">Llama-2 shows lower accuracy. Consider fine-tuning.</p>
-      </div>
-    </div>
-  </div>
-);
+ 
 
 // ============================================
 // MAIN COMPONENT
@@ -670,8 +645,7 @@ export default function Dashboard() {
           {/* Empty State replaces the tab navigation and chart content */}
           <EmptyState />
           
-          {/* Keep AI Insights for consistency */}
-          <AIInsights />
+  
         </div>
       </div>
     );
@@ -694,8 +668,7 @@ export default function Dashboard() {
         {activeTab === 'clients' && <ClientsTab isLoading={isLoading} />}
         {activeTab === 'costs' && <CostsTab isLoading={isLoading} />}
         
-        <AIInsights />
-      </div>
+       </div>
     </div>
   );
 }

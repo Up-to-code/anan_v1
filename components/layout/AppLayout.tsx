@@ -23,7 +23,9 @@ import {
   Zap,
   LogOut,
   Crown,
-  Sparkles
+  Sparkles,
+  AirVent,
+  Code
 } from 'lucide-react';
 
 import { Button } from '@/components/ui/Button';
@@ -76,14 +78,14 @@ const defaultBreadcrumbs = [
   { label: 'Dashboard', href: '/dashboard' }
 ];
 
-// Navigation data
+// Navigation data (remove badge usage)
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3, current: true },
-  { name: 'Messages', href: '/messages', icon: MessageCircle, current: false, badge: '3' },
-  { name: 'Contacts', href: '/contacts', icon: Users, current: false },
+  { name: 'Agents', href: '/dashboard/agents', icon: AirVent, current: false },
+  { name: 'integrations', href: '/dashboard/integrations', icon: Code, current: false },
   { name: 'Products', href: '/products', icon: Package, current: false },
-  { name: 'Orders', href: '/orders', icon: ShoppingCart, current: false },
-  { name: 'Billing', href: '/billing', icon: CreditCard, current: false },
+  { name: 'Contacts', href: '/dashboard/contacts', icon: User, current: false },
+  { name: 'Billing', href: '/dashboard/billing', icon: CreditCard, current: false },
 ];
 
 export function AppLayout({
@@ -187,19 +189,7 @@ function SidebarComponent({ sidebarOpen, onToggleSidebar, user }: SidebarProps) 
                   <Icon className={`w-5 h-5 ${item.current ? 'text-white' : 'text-slate-400 group-hover:text-white'}`} />
                   <span className="font-medium">{item.name}</span>
                 </div>
-                {item.badge && (
-                  <Badge
-                    variant={item.current ? 'primary' : 'outline'}
-                    size="sm"
-                    className={
-                      item.current
-                        ? 'bg-white/20 text-white border-white/30'
-                        : 'bg-slate-700 text-slate-300 border-slate-600 group-hover:bg-slate-600'
-                    }
-                  >
-                    {item.badge}
-                  </Badge>
-                )}
+                {/* Remove badge rendering as navigation items do not use badge property */}
               </a>
             );
           })}
