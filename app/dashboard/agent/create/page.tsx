@@ -138,16 +138,8 @@ export default function CreateAgentPage() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-100">
-      {/* Header */}
-      <header className="bg-white border-b border-gray-200">
-        <div className="max-w-6xl mx-auto px-6 py-4">
-          <a href="/agents" className="flex items-center text-gray-600 hover:text-gray-900 text-sm">
-            <ArrowLeft size={16} className="mr-2" />
-            Back to Agents
-          </a>
-        </div>
-      </header>
+    <div className="min-h-screen ">
+
 
       <div className="max-w-6xl mx-auto px-6 py-8">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-8">
