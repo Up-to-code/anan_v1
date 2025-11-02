@@ -1,8 +1,8 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, ReactNode } from 'react';
 import Head from 'next/head';
-import { 
-  Workflow, Settings, Play, Clock, Activity, 
+import {
+  Workflow, Settings, Play, Clock, Activity,
   Plus, MessageCircle, Mail, Users, BarChart3,
   X, Save, Type, FileText, Cpu, ChevronDown,
   ChevronUp, Search, Filter, MoreVertical,
@@ -13,7 +13,7 @@ import {
 // Types
 interface Integration {
   name: string;
-  type: 'slack' | 'email' | 'zendesk' | 'crm' | 'jira' | 'datadog';
+  type: keyof typeof INTEGRATION_ICONS;
 }
 
 interface Agent {
@@ -29,42 +29,54 @@ interface Agent {
   executions: number;
 }
 
+type StatusConfig = {
+  [key in Agent['status']]: {
+    color: string;
+    label: string;
+    icon: React.ComponentType<{ className?: string }>;
+    bgColor: string;
+    textColor: string;
+    borderColor: string;
+    animate?: boolean;
+  }
+};
+
 // Constants
-const STATUS_CONFIG = {
-  active: { 
-    color: 'bg-emerald-500', 
-    label: 'Active', 
+const STATUS_CONFIG: StatusConfig = {
+  active: {
+    color: 'bg-emerald-500',
+    label: 'Active',
     icon: CheckCircle,
     bgColor: 'bg-emerald-50',
     textColor: 'text-emerald-700',
     borderColor: 'border-emerald-200'
   },
-  idle: { 
-    color: 'bg-amber-500', 
-    label: 'Idle', 
+  idle: {
+    color: 'bg-amber-500',
+    label: 'Idle',
     icon: PauseCircle,
     bgColor: 'bg-amber-50',
     textColor: 'text-amber-700',
     borderColor: 'border-amber-200'
   },
-  offline: { 
-    color: 'bg-slate-400', 
-    label: 'Offline', 
+  offline: {
+    color: 'bg-slate-400',
+    label: 'Offline',
     icon: X,
     bgColor: 'bg-slate-50',
     textColor: 'text-slate-700',
     borderColor: 'border-slate-200'
   },
-  loading: { 
-    color: 'bg-blue-500', 
-    label: 'Loading', 
+  loading: {
+    color: 'bg-blue-500',
+    label: 'Loading',
     icon: Loader2,
     bgColor: 'bg-blue-50',
     textColor: 'text-blue-700',
     borderColor: 'border-blue-200',
     animate: true
   }
-} as const;
+};
 
 const INTEGRATION_ICONS = {
   slack: MessageCircle,
@@ -75,38 +87,50 @@ const INTEGRATION_ICONS = {
   datadog: Activity
 } as const;
 
-const MODELS = ['GPT-4', 'Claude-2', 'GPT-3.5', 'Llama-2', 'Gemini Pro'];
-const PRODUCTS = ['Helpdesk', 'Chat', 'Ticketing', 'Sales', 'CRM', 'Analytics', 'Billing'];
-const TOOLS = ['Classifier', 'Auto-Reply', 'Routing', 'Scoring', 'Enrichment', 'Notifications', 'Invoice Gen'];
+const MODELS = ['GPT-4', 'Claude-2', 'GPT-3.5', 'Llama-2', 'Gemini Pro'] as const;
+const PRODUCTS = ['Helpdesk', 'Chat', 'Ticketing', 'Sales', 'CRM', 'Analytics', 'Billing'] as const;
+const TOOLS = ['Classifier', 'Auto-Reply', 'Routing', 'Scoring', 'Enrichment', 'Notifications', 'Invoice Gen'] as const;
 
 // ==================== UI Components ====================
 
 // Toast Component
-const Toast: React.FC<{ 
-  message: string; 
-  type: 'success' | 'error' | 'info';
+type ToastType = 'success' | 'error' | 'info';
+const Toast: React.FC<{
+  message: string;
+  type: ToastType;
   onClose: () => void;
 }> = ({ message, type, onClose }) => {
   const [isVisible, setIsVisible] = useState(true);
-  
+
   useEffect(() => {
     const timer = setTimeout(() => {
       setIsVisible(false);
       setTimeout(onClose, 300);
     }, 3000);
-    
+
     return () => clearTimeout(timer);
   }, [onClose]);
-  
-  const bgColor = type === 'success' ? 'bg-emerald-500' : type === 'error' ? 'bg-red-500' : 'bg-blue-500';
-  
+
+  const bgColor =
+    type === 'success'
+      ? 'bg-emerald-500'
+      : type === 'error'
+      ? 'bg-red-500'
+      : 'bg-blue-500';
+
   return (
-    <div className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ${
-      isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
-    } ${bgColor}`}>
-      {type === 'success' ? <CheckCircle className="w-5 h-5" /> : 
-       type === 'error' ? <AlertCircle className="w-5 h-5" /> : 
-       <Activity className="w-5 h-5" />}
+    <div
+      className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ${
+        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+      } ${bgColor}`}
+    >
+      {type === 'success' ? (
+        <CheckCircle className="w-5 h-5" />
+      ) : type === 'error' ? (
+        <AlertCircle className="w-5 h-5" />
+      ) : (
+        <Activity className="w-5 h-5" />
+      )}
       <span className="font-medium">{message}</span>
       <button onClick={onClose} className="ml-2 hover:opacity-80 transition-opacity">
         <X className="w-4 h-4" />
@@ -125,21 +149,37 @@ const ConfirmDialog: React.FC<{
   onConfirm: () => void;
   onCancel: () => void;
   type?: 'danger' | 'warning' | 'info';
-}> = ({ isOpen, title, message, confirmText, cancelText, onConfirm, onCancel, type = 'danger' }) => {
-  const buttonColor = type === 'danger' ? 'bg-red-600 hover:bg-red-700' : 
-                     type === 'warning' ? 'bg-amber-600 hover:bg-amber-700' : 
-                     'bg-blue-600 hover:bg-blue-700';
-  
+}> = ({
+  isOpen,
+  title,
+  message,
+  confirmText,
+  cancelText,
+  onConfirm,
+  onCancel,
+  type = 'danger'
+}) => {
+  const buttonColor =
+    type === 'danger'
+      ? 'bg-red-600 hover:bg-red-700'
+      : type === 'warning'
+      ? 'bg-amber-600 hover:bg-amber-700'
+      : 'bg-blue-600 hover:bg-blue-700';
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onCancel} />
       <div className="relative bg-white rounded-xl max-w-md w-full p-6 border border-slate-200 shadow-xl">
         <div className="flex items-center gap-3 mb-4">
-          {type === 'danger' ? <AlertCircle className="w-6 h-6 text-red-500" /> : 
-           type === 'warning' ? <AlertCircle className="w-6 h-6 text-amber-500" /> : 
-           <AlertCircle className="w-6 h-6 text-blue-500" />}
+          {type === 'danger' ? (
+            <AlertCircle className="w-6 h-6 text-red-500" />
+          ) : type === 'warning' ? (
+            <AlertCircle className="w-6 h-6 text-amber-500" />
+          ) : (
+            <AlertCircle className="w-6 h-6 text-blue-500" />
+          )}
           <h3 className="text-lg font-semibold text-slate-900">{title}</h3>
         </div>
         <p className="text-slate-600 mb-6">{message}</p>
@@ -168,7 +208,7 @@ const ConfirmDialog: React.FC<{
 const StatusIndicator: React.FC<{ status: Agent['status'] }> = ({ status }) => {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
-  
+
   return (
     <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bgColor} ${config.borderColor} border`}>
       <Icon className={`w-4 h-4 ${config.textColor} ${config.animate ? 'animate-spin' : ''}`} />
@@ -198,18 +238,21 @@ const ExecutionStats: React.FC<{ agent: Agent }> = ({ agent }) => (
 // Integration Item Component
 const IntegrationItem: React.FC<{ integration: Integration }> = ({ integration }) => {
   const Icon = INTEGRATION_ICONS[integration.type];
-  
+
   return (
     <div className="flex items-center gap-2 p-2.5 bg-white border border-slate-200 rounded-lg cursor-pointer hover:border-blue-300 hover:bg-blue-50/50 transition-all group">
       <Icon className="w-4 h-4 text-slate-600 group-hover:text-blue-600 transition-colors" />
-      <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700 transition-colors">{integration.name}</span>
+      <span className="text-sm font-medium text-slate-700 group-hover:text-blue-700 transition-colors">
+        {integration.name}
+      </span>
     </div>
   );
 };
 
 // Add Integration Button Component
 const AddIntegrationButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
-  <button 
+  <button
+    type="button"
     onClick={onClick}
     className="flex items-center gap-2 p-2.5 border border-dashed border-slate-300 rounded-lg text-slate-500 hover:border-blue-400 hover:text-blue-600 hover:bg-blue-50/50 transition-all"
   >
@@ -219,27 +262,29 @@ const AddIntegrationButton: React.FC<{ onClick?: () => void }> = ({ onClick }) =
 );
 
 // Section Component
-const Section: React.FC<{ 
-  title: string; 
-  items: string[]; 
-  expanded?: boolean; 
-  onToggle?: () => void 
+const Section: React.FC<{
+  title: string;
+  items: string[];
+  expanded?: boolean;
+  onToggle?: () => void;
 }> = ({ title, items, expanded = true, onToggle }) => (
   <div className="space-y-3">
-    <button 
+    <button
+      type="button"
       onClick={onToggle}
       className="flex items-center gap-2 text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors"
     >
       {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
       {title}
-      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
-        {items.length}
-      </span>
+      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{items.length}</span>
     </button>
     {expanded && (
       <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
         {items.map((item, index) => (
-          <div key={index} className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700">
+          <div
+            key={index}
+            className="px-3 py-1.5 bg-slate-50 border border-slate-200 rounded-lg text-sm text-slate-700"
+          >
             {item}
           </div>
         ))}
@@ -249,22 +294,23 @@ const Section: React.FC<{
 );
 
 // Action Button Component
-const ActionButton: React.FC<{ 
-  icon: React.ReactNode; 
-  onClick: () => void; 
+const ActionButton: React.FC<{
+  icon: ReactNode;
+  onClick: () => void;
   label: string;
   primary?: boolean;
   disabled?: boolean;
 }> = ({ icon, onClick, label, primary = false, disabled = false }) => (
-  <button 
+  <button
+    type="button"
     onClick={onClick}
     disabled={disabled}
     className={`p-2.5 rounded-lg border flex items-center justify-center transition-all ${
-      disabled 
-        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed' 
-        : primary 
-          ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md' 
-          : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
+      disabled
+        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+        : primary
+        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
+        : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
     }`}
     aria-label={label}
   >
@@ -273,35 +319,44 @@ const ActionButton: React.FC<{
 );
 
 // Dropdown Menu Component
-const DropdownMenu: React.FC<{ 
-  agent: Agent; 
-  onDelete: (id: string) => void; 
+const DropdownMenu: React.FC<{
+  agent: Agent;
+  onDelete: (id: string) => void;
   onEdit: (agent: Agent) => void;
 }> = ({ agent, onDelete, onEdit }) => {
   const [isOpen, setIsOpen] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
-  
+
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
-    };
-    
+    }
+
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
-  const menuItems = [
+  const menuItems: {
+    icon: React.ComponentType<{ className?: string }>;
+    label: string;
+    action: () => void;
+  }[] = [
     { icon: Edit3, label: 'Edit', action: () => onEdit(agent) },
-    { icon: Download, label: 'Export', action: () => console.log('Export:', agent.name) },
-    { icon: Trash2, label: 'Delete', action: () => onDelete(agent.id) },
+    // Fixed: Export now does nothing (removed console.log)
+    { icon: Download, label: 'Export', action: () => {} },
+    { icon: Trash2, label: 'Delete', action: () => onDelete(agent.id) }
   ];
 
   return (
     <div className="relative" ref={dropdownRef}>
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        type="button"
+        onClick={() => setIsOpen((o) => !o)}
         className="p-2.5 rounded-lg border border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50 transition-all"
       >
         <MoreVertical className="w-4 h-4" />
@@ -314,6 +369,7 @@ const DropdownMenu: React.FC<{
             return (
               <button
                 key={index}
+                type="button"
                 onClick={() => {
                   item.action();
                   setIsOpen(false);
@@ -332,23 +388,28 @@ const DropdownMenu: React.FC<{
 };
 
 // Agent Card Component
-const AgentCard: React.FC<{ 
-  agent: Agent; 
-  onDelete: (id: string) => void; 
+const AgentCard: React.FC<{
+  agent: Agent;
+  onDelete: (id: string) => void;
   onEdit: (agent: Agent) => void;
   onRun: (id: string) => void;
 }> = ({ agent, onDelete, onEdit, onRun }) => {
-  const [expandedSections, setExpandedSections] = useState({
+  const [expandedSections, setExpandedSections] = useState<{
+    integrations: boolean;
+    products: boolean;
+    tools: boolean;
+  }>({
     integrations: true,
     products: true,
     tools: true
   });
 
-  const handleSettings = () => console.log('Opening settings for:', agent.name);
-  const handleAddIntegration = () => console.log('Add integration to:', agent.name);
+  // Fix: Remove unused handler implementations to avoid warnings.
+  const handleSettings = () => {};
+  const handleAddIntegration = () => {};
 
   const toggleSection = (section: keyof typeof expandedSections) => {
-    setExpandedSections(prev => ({
+    setExpandedSections((prev) => ({
       ...prev,
       [section]: !prev[section]
     }));
@@ -375,23 +436,25 @@ const AgentCard: React.FC<{
         </div>
 
         <div className="flex items-center gap-2 ml-4">
-          <ActionButton 
-            icon={agent.status === 'loading' ? <Loader2 className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />} 
-            onClick={() => onRun(agent.id)} 
+          <ActionButton
+            icon={
+              agent.status === 'loading' ? (
+                <Loader2 className="w-4 h-4 animate-spin" />
+              ) : (
+                <Play className="w-4 h-4" />
+              )
+            }
+            onClick={() => onRun(agent.id)}
             label={`Run ${agent.name}`}
             primary
             disabled={agent.status === 'loading'}
           />
-          <ActionButton 
-            icon={<Settings className="w-4 h-4" />} 
-            onClick={handleSettings} 
+          <ActionButton
+            icon={<Settings className="w-4 h-4" />}
+            onClick={handleSettings}
             label={`Settings for ${agent.name}`}
           />
-          <DropdownMenu 
-            agent={agent} 
-            onDelete={onDelete} 
-            onEdit={onEdit}
-          />
+          <DropdownMenu agent={agent} onDelete={onDelete} onEdit={onEdit} />
         </div>
       </div>
 
@@ -399,16 +462,19 @@ const AgentCard: React.FC<{
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-6 border-t border-slate-100">
         {/* Integrations */}
         <div className="space-y-3">
-          <Section 
-            title="Integrations" 
-            items={agent.integrations.map(i => i.name)}
+          <Section
+            title="Integrations"
+            items={agent.integrations.map((i) => i.name)}
             expanded={expandedSections.integrations}
             onToggle={() => toggleSection('integrations')}
           />
           {expandedSections.integrations && (
             <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
               {agent.integrations.map((integration, index) => (
-                <IntegrationItem key={`${integration.type}-${index}`} integration={integration} />
+                <IntegrationItem
+                  key={`${integration.type}-${index}`}
+                  integration={integration}
+                />
               ))}
               <AddIntegrationButton onClick={handleAddIntegration} />
             </div>
@@ -417,14 +483,14 @@ const AgentCard: React.FC<{
 
         {/* Products & Tools */}
         <div className="lg:col-span-2 space-y-6">
-          <Section 
-            title="Products" 
+          <Section
+            title="Products"
             items={agent.products}
             expanded={expandedSections.products}
             onToggle={() => toggleSection('products')}
           />
-          <Section 
-            title="Tools" 
+          <Section
+            title="Tools"
             items={agent.tools}
             expanded={expandedSections.tools}
             onToggle={() => toggleSection('tools')}
@@ -438,13 +504,16 @@ const AgentCard: React.FC<{
 // Add Agent Card Component
 const AddAgentCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
   <button
+    type="button"
     onClick={onClick}
     className="w-full bg-white border-2 border-dashed border-slate-300 rounded-xl p-8 text-center hover:border-blue-400 hover:bg-blue-50/50 transition-all group"
   >
     <div className="w-16 h-16 bg-blue-50 rounded-lg flex items-center justify-center mx-auto mb-4 group-hover:bg-blue-100 transition-colors">
       <Plus className="w-8 h-8 text-blue-600" />
     </div>
-    <h3 className="text-xl font-semibold text-slate-900 mb-2 group-hover:text-slate-700 transition-colors">Add New Agent</h3>
+    <h3 className="text-xl font-semibold text-slate-900 mb-2 group-hover:text-slate-700 transition-colors">
+      Add New Agent
+    </h3>
     <p className="text-slate-600 group-hover:text-slate-500 transition-colors">Create a new workflow agent</p>
   </button>
 );
@@ -468,14 +537,16 @@ const SearchBar: React.FC<{
       />
     </div>
     <div className="flex gap-2">
-      <button 
+      <button
+        type="button"
         onClick={onFilterClick}
         className="px-4 py-3 border border-slate-300 rounded-lg text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2 font-medium"
       >
         <Filter className="w-4 h-4" />
         Filter
       </button>
-      <button 
+      <button
+        type="button"
         onClick={onImportClick}
         className="px-4 py-3 border border-slate-300 rounded-lg text-slate-700 hover:border-slate-400 hover:bg-slate-50 transition-all flex items-center gap-2 font-medium"
       >
@@ -489,21 +560,33 @@ const SearchBar: React.FC<{
 // ==================== Modal Components ====================
 
 // Create Agent Drawer Component
-const CreateAgentDrawer: React.FC<{ 
-  isOpen: boolean; 
+type CreateAgentDrawerProps = {
+  isOpen: boolean;
   onClose: () => void;
   onCreate: (agent: Omit<Agent, 'id' | 'status' | 'lastRun' | 'executions'>) => void;
   editingAgent?: Agent;
-}> = ({ isOpen, onClose, onCreate, editingAgent }) => {
-  const [formData, setFormData] = useState({
+};
+const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
+  isOpen,
+  onClose,
+  onCreate,
+  editingAgent
+}) => {
+  const [formData, setFormData] = useState<{
+    name: string;
+    description: string;
+    model: string;
+    products: string[];
+    tools: string[];
+  }>({
     name: '',
     description: '',
     model: MODELS[0],
-    products: [] as string[],
-    tools: [] as string[],
+    products: [],
+    tools: []
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  
+
   useEffect(() => {
     if (editingAgent) {
       setFormData({
@@ -511,7 +594,7 @@ const CreateAgentDrawer: React.FC<{
         description: editingAgent.description,
         model: editingAgent.model,
         products: editingAgent.products,
-        tools: editingAgent.tools,
+        tools: editingAgent.tools
       });
     } else {
       setFormData({
@@ -519,7 +602,7 @@ const CreateAgentDrawer: React.FC<{
         description: '',
         model: MODELS[0],
         products: [],
-        tools: [],
+        tools: []
       });
     }
   }, [editingAgent, isOpen]);
@@ -527,62 +610,68 @@ const CreateAgentDrawer: React.FC<{
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!formData.name.trim()) return;
-    
+
     setIsSubmitting(true);
-    
-    await new Promise(resolve => setTimeout(resolve, 1000));
-    
+
+    await new Promise((resolve) => setTimeout(resolve, 1000));
+
     onCreate({
       ...formData,
-      integrations: [],
+      integrations: []
     });
-    
+
     setIsSubmitting(false);
-    
+
     if (!editingAgent) {
       setFormData({
         name: '',
         description: '',
         model: MODELS[0],
         products: [],
-        tools: [],
+        tools: []
       });
     }
-    
+
     onClose();
   };
 
   const toggleProduct = (product: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       products: prev.products.includes(product)
-        ? prev.products.filter(p => p !== product)
+        ? prev.products.filter((p) => p !== product)
         : [...prev.products, product]
     }));
   };
 
   const toggleTool = (tool: string) => {
-    setFormData(prev => ({
+    setFormData((prev) => ({
       ...prev,
       tools: prev.tools.includes(tool)
-        ? prev.tools.filter(t => t !== tool)
+        ? prev.tools.filter((t) => t !== tool)
         : [...prev.tools, tool]
     }));
   };
 
   return (
     <>
-      {isOpen && <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onClose} />}
-      <div className={`fixed top-0 right-0 h-full w-[500px] bg-white z-50 transform transition-all duration-300 ease-in-out ${
-        isOpen 
-          ? 'translate-x-0' 
-          : 'translate-x-full'
-      }`}>
+      {isOpen && (
+        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onClose} />
+      )}
+      <div
+        className={`fixed top-0 right-0 h-full w-[500px] bg-white z-50 transform transition-all duration-300 ease-in-out ${
+          isOpen ? 'translate-x-0' : 'translate-x-full'
+        }`}
+      >
         {/* Header */}
         <div className="flex items-center justify-between p-6 border-b border-slate-200 bg-white">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              {editingAgent ? <Edit3 className="w-4 h-4 text-blue-600" /> : <Plus className="w-4 h-4 text-blue-600" />}
+              {editingAgent ? (
+                <Edit3 className="w-4 h-4 text-blue-600" />
+              ) : (
+                <Plus className="w-4 h-4 text-blue-600" />
+              )}
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
@@ -594,6 +683,7 @@ const CreateAgentDrawer: React.FC<{
             </div>
           </div>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
@@ -615,7 +705,9 @@ const CreateAgentDrawer: React.FC<{
                   type="text"
                   required
                   value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="e.g., Customer Support Agent"
                 />
@@ -629,7 +721,12 @@ const CreateAgentDrawer: React.FC<{
                 <textarea
                   required
                   value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({
+                      ...prev,
+                      description: e.target.value
+                    }))
+                  }
                   rows={3}
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="Describe what this agent does..."
@@ -643,11 +740,15 @@ const CreateAgentDrawer: React.FC<{
                 </label>
                 <select
                   value={formData.model}
-                  onChange={(e) => setFormData(prev => ({ ...prev, model: e.target.value }))}
+                  onChange={(e) =>
+                    setFormData((prev) => ({ ...prev, model: e.target.value }))
+                  }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
-                  {MODELS.map(model => (
-                    <option key={model} value={model}>{model}</option>
+                  {MODELS.map((model) => (
+                    <option key={model} value={model}>
+                      {model}
+                    </option>
                   ))}
                 </select>
               </div>
@@ -659,7 +760,7 @@ const CreateAgentDrawer: React.FC<{
                 Products
               </label>
               <div className="space-y-2">
-                {PRODUCTS.map(product => (
+                {PRODUCTS.map((product) => (
                   <button
                     key={product}
                     type="button"
@@ -687,7 +788,7 @@ const CreateAgentDrawer: React.FC<{
                 Tools
               </label>
               <div className="space-y-2">
-                {TOOLS.map(tool => (
+                {TOOLS.map((tool) => (
                   <button
                     key={tool}
                     type="button"
@@ -752,56 +853,60 @@ const FilterModal: React.FC<{
     products: string[];
   }) => void;
 }> = ({ isOpen, onClose, onApplyFilter }) => {
-  const [filters, setFilters] = useState({
-    status: [] as string[],
-    models: [] as string[],
-    products: [] as string[],
+  const [filters, setFilters] = useState<{
+    status: string[];
+    models: string[];
+    products: string[];
+  }>({
+    status: [],
+    models: [],
+    products: []
   });
-  
-  const statusOptions = ['active', 'idle', 'offline'];
-  
+
+  const statusOptions: Agent['status'][] = ['active', 'idle', 'offline'];
+
   const handleStatusToggle = (status: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       status: prev.status.includes(status)
-        ? prev.status.filter(s => s !== status)
+        ? prev.status.filter((s) => s !== status)
         : [...prev.status, status]
     }));
   };
-  
+
   const handleModelToggle = (model: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       models: prev.models.includes(model)
-        ? prev.models.filter(m => m !== model)
+        ? prev.models.filter((m) => m !== model)
         : [...prev.models, model]
     }));
   };
-  
+
   const handleProductToggle = (product: string) => {
-    setFilters(prev => ({
+    setFilters((prev) => ({
       ...prev,
       products: prev.products.includes(product)
-        ? prev.products.filter(p => p !== product)
+        ? prev.products.filter((p) => p !== product)
         : [...prev.products, product]
     }));
   };
-  
+
   const handleApply = () => {
     onApplyFilter(filters);
     onClose();
   };
-  
+
   const handleReset = () => {
     setFilters({
       status: [],
       models: [],
-      products: [],
+      products: []
     });
   };
-  
+
   if (!isOpen) return null;
-  
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
       <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
@@ -809,21 +914,23 @@ const FilterModal: React.FC<{
         <div className="flex items-center justify-between mb-6">
           <h2 className="text-xl font-semibold text-slate-900">Filter Agents</h2>
           <button
+            type="button"
             onClick={onClose}
             className="p-2 hover:bg-slate-100 rounded-lg transition-colors"
           >
             <X className="w-5 h-5 text-slate-500" />
           </button>
         </div>
-        
+
         <div className="space-y-6">
           {/* Status Filter */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">Status</h3>
             <div className="flex flex-wrap gap-2">
-              {statusOptions.map(status => (
+              {statusOptions.map((status) => (
                 <button
                   key={status}
+                  type="button"
                   onClick={() => handleStatusToggle(status)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.status.includes(status)
@@ -836,14 +943,15 @@ const FilterModal: React.FC<{
               ))}
             </div>
           </div>
-          
+
           {/* Model Filter */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">AI Model</h3>
             <div className="flex flex-wrap gap-2">
-              {MODELS.map(model => (
+              {MODELS.map((model) => (
                 <button
                   key={model}
+                  type="button"
                   onClick={() => handleModelToggle(model)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.models.includes(model)
@@ -856,14 +964,15 @@ const FilterModal: React.FC<{
               ))}
             </div>
           </div>
-          
+
           {/* Product Filter */}
           <div>
             <h3 className="text-sm font-medium text-slate-700 mb-3">Products</h3>
             <div className="flex flex-wrap gap-2">
-              {PRODUCTS.map(product => (
+              {PRODUCTS.map((product) => (
                 <button
                   key={product}
+                  type="button"
                   onClick={() => handleProductToggle(product)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.products.includes(product)
@@ -877,15 +986,17 @@ const FilterModal: React.FC<{
             </div>
           </div>
         </div>
-        
+
         <div className="flex gap-3 justify-end mt-6 pt-6 border-t border-slate-200">
           <button
+            type="button"
             onClick={handleReset}
             className="px-4 py-2 border border-slate-300 rounded-lg text-slate-700 hover:bg-slate-50 transition-colors"
           >
             Reset
           </button>
           <button
+            type="button"
             onClick={handleApply}
             className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
           >
@@ -935,15 +1046,19 @@ const AgentsPage: React.FC = () => {
   ]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | undefined>();
+  const [editingAgent, setEditingAgent] = useState<Agent | undefined>(undefined);
   const [searchTerm, setSearchTerm] = useState('');
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
-  const [filters, setFilters] = useState({
-    status: [] as string[],
-    models: [] as string[],
-    products: [] as string[],
+  const [filters, setFilters] = useState<{
+    status: string[];
+    models: string[];
+    products: string[];
+  }>({
+    status: [],
+    models: [],
+    products: []
   });
-  const [toast, setToast] = useState<{ message: string; type: 'success' | 'error' | 'info' } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -962,13 +1077,17 @@ const AgentsPage: React.FC = () => {
     type: 'danger'
   });
 
-  const handleCreateAgent = (newAgentData: Omit<Agent, 'id' | 'status' | 'lastRun' | 'executions'>) => {
+  const handleCreateAgent = (
+    newAgentData: Omit<Agent, 'id' | 'status' | 'lastRun' | 'executions'>
+  ) => {
     if (editingAgent) {
-      setAgents(prev => prev.map(agent => 
-        agent.id === editingAgent.id 
-          ? { ...agent, ...newAgentData }
-          : agent
-      ));
+      setAgents((prev) =>
+        prev.map((agent) =>
+          agent.id === editingAgent.id
+            ? { ...agent, ...newAgentData }
+            : agent
+        )
+      );
       setToast({ message: 'Agent updated successfully', type: 'success' });
     } else {
       const newAgent: Agent = {
@@ -978,7 +1097,7 @@ const AgentsPage: React.FC = () => {
         lastRun: 'Never',
         executions: 0
       };
-      setAgents(prev => [...prev, newAgent]);
+      setAgents((prev) => [...prev, newAgent]);
       setToast({ message: 'Agent created successfully', type: 'success' });
     }
     setEditingAgent(undefined);
@@ -990,9 +1109,9 @@ const AgentsPage: React.FC = () => {
   };
 
   const handleDeleteAgent = (id: string) => {
-    const agent = agents.find(a => a.id === id);
+    const agent = agents.find((a) => a.id === id);
     if (!agent) return;
-    
+
     setConfirmDialog({
       isOpen: true,
       title: 'Delete Agent',
@@ -1000,34 +1119,36 @@ const AgentsPage: React.FC = () => {
       confirmText: 'Delete',
       cancelText: 'Cancel',
       onConfirm: () => {
-        setAgents(prev => prev.filter(agent => agent.id !== id));
+        setAgents((prev) => prev.filter((agent) => agent.id !== id));
         setToast({ message: 'Agent deleted successfully', type: 'success' });
-        setConfirmDialog({ ...confirmDialog, isOpen: false });
+        setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
       },
       type: 'danger'
     });
   };
 
   const handleRunAgent = async (id: string) => {
-    setAgents(prev => prev.map(agent => 
-      agent.id === id 
-        ? { ...agent, status: 'loading' }
-        : agent
-    ));
-    
-    await new Promise(resolve => setTimeout(resolve, 2000));
-    
-    setAgents(prev => prev.map(agent => 
-      agent.id === id 
-        ? { 
-            ...agent, 
-            status: 'active', 
-            lastRun: 'Just now',
-            executions: agent.executions + 1
-          }
-        : agent
-    ));
-    
+    setAgents((prev) =>
+      prev.map((agent) =>
+        agent.id === id ? { ...agent, status: 'loading' } : agent
+      )
+    );
+
+    await new Promise((resolve) => setTimeout(resolve, 2000));
+
+    setAgents((prev) =>
+      prev.map((agent) =>
+        agent.id === id
+          ? {
+              ...agent,
+              status: 'active',
+              lastRun: 'Just now',
+              executions: agent.executions + 1
+            }
+          : agent
+      )
+    );
+
     setToast({ message: 'Agent started successfully', type: 'success' });
   };
 
@@ -1039,20 +1160,27 @@ const AgentsPage: React.FC = () => {
     setToast({ message: 'Import feature coming soon', type: 'info' });
   };
 
-  const filteredAgents = agents.filter(agent => {
-    const matchesSearch = agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         agent.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                         agent.products.some(product => product.toLowerCase().includes(searchTerm.toLowerCase()));
-    
-    const matchesStatus = filters.status.length === 0 || filters.status.includes(agent.status);
-    const matchesModel = filters.models.length === 0 || filters.models.includes(agent.model);
-    const matchesProduct = filters.products.length === 0 || 
-                          agent.products.some(product => filters.products.includes(product));
-    
+  const filteredAgents = agents.filter((agent) => {
+    const matchesSearch =
+      agent.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.description.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      agent.products.some((product) =>
+        product.toLowerCase().includes(searchTerm.toLowerCase())
+      );
+
+    const matchesStatus =
+      filters.status.length === 0 || filters.status.includes(agent.status);
+    const matchesModel =
+      filters.models.length === 0 || filters.models.includes(agent.model);
+    const matchesProduct =
+      filters.products.length === 0 ||
+      agent.products.some((product) => filters.products.includes(product));
+
     return matchesSearch && matchesStatus && matchesModel && matchesProduct;
   });
 
-  const activeFiltersCount = filters.status.length + filters.models.length + filters.products.length;
+  const activeFiltersCount =
+    filters.status.length + filters.models.length + filters.products.length;
 
   return (
     <>
@@ -1065,40 +1193,54 @@ const AgentsPage: React.FC = () => {
           {/* Header */}
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-slate-900 mb-2">Workflow Agents</h1>
-            <p className="text-slate-600">Manage and monitor your automated workflow agents</p>
+            <p className="text-slate-600">
+              Manage and monitor your automated workflow agents
+            </p>
           </div>
 
           {/* Search and Actions Bar */}
           <div className="mb-6">
-            <SearchBar 
+            <SearchBar
               searchTerm={searchTerm}
               onSearchChange={setSearchTerm}
               onFilterClick={() => setIsFilterModalOpen(true)}
               onImportClick={handleImport}
             />
-            
+
             {/* Active Filters */}
             {activeFiltersCount > 0 && (
               <div className="mt-3 flex items-center gap-2">
                 <span className="text-sm text-slate-600">Active filters:</span>
                 <div className="flex flex-wrap gap-2">
-                  {filters.status.map(status => (
-                    <span key={status} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
+                  {filters.status.map((status) => (
+                    <span
+                      key={status}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md"
+                    >
                       Status: {status}
                     </span>
                   ))}
-                  {filters.models.map(model => (
-                    <span key={model} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
+                  {filters.models.map((model) => (
+                    <span
+                      key={model}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md"
+                    >
                       Model: {model}
                     </span>
                   ))}
-                  {filters.products.map(product => (
-                    <span key={product} className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md">
+                  {filters.products.map((product) => (
+                    <span
+                      key={product}
+                      className="px-2 py-1 bg-blue-50 text-blue-700 text-xs rounded-md"
+                    >
                       Product: {product}
                     </span>
                   ))}
                   <button
-                    onClick={() => setFilters({ status: [], models: [], products: [] })}
+                    type="button"
+                    onClick={() =>
+                      setFilters({ status: [], models: [], products: [] })
+                    }
                     className="px-2 py-1 bg-slate-100 text-slate-700 text-xs rounded-md hover:bg-slate-200 transition-colors"
                   >
                     Clear all
@@ -1110,20 +1252,22 @@ const AgentsPage: React.FC = () => {
 
           {/* Agent List */}
           <div className="space-y-6">
-            {filteredAgents.map((agent, index) => (
-              <AgentCard 
-                key={agent.id} 
-                agent={agent} 
+            {filteredAgents.map((agent) => (
+              <AgentCard
+                key={agent.id}
+                agent={agent}
                 onDelete={handleDeleteAgent}
                 onEdit={handleEditAgent}
                 onRun={handleRunAgent}
               />
             ))}
 
-            <AddAgentCard onClick={() => {
-              setEditingAgent(undefined);
-              setIsDrawerOpen(true);
-            }} />
+            <AddAgentCard
+              onClick={() => {
+                setEditingAgent(undefined);
+                setIsDrawerOpen(true);
+              }}
+            />
           </div>
 
           {/* Empty State */}
@@ -1135,6 +1279,7 @@ const AgentsPage: React.FC = () => {
               <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents found</h3>
               <p className="text-slate-600">Try adjusting your search terms or filters</p>
               <button
+                type="button"
                 onClick={() => setFilters({ status: [], models: [], products: [] })}
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
@@ -1142,7 +1287,7 @@ const AgentsPage: React.FC = () => {
               </button>
             </div>
           )}
-          
+
           {/* No Agents State */}
           {agents.length === 0 && (
             <div className="text-center py-12">
@@ -1150,8 +1295,11 @@ const AgentsPage: React.FC = () => {
                 <Workflow className="w-8 h-8 text-slate-400" />
               </div>
               <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents yet</h3>
-              <p className="text-slate-600 mb-4">Create your first workflow agent to get started</p>
+              <p className="text-slate-600 mb-4">
+                Create your first workflow agent to get started
+              </p>
               <button
+                type="button"
                 onClick={() => setIsDrawerOpen(true)}
                 className="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors flex items-center gap-2 mx-auto"
               >
@@ -1172,14 +1320,14 @@ const AgentsPage: React.FC = () => {
           onCreate={handleCreateAgent}
           editingAgent={editingAgent}
         />
-        
+
         {/* Filter Modal */}
         <FilterModal
           isOpen={isFilterModalOpen}
           onClose={() => setIsFilterModalOpen(false)}
           onApplyFilter={handleApplyFilter}
         />
-        
+
         {/* Confirmation Dialog */}
         <ConfirmDialog
           isOpen={confirmDialog.isOpen}
@@ -1188,10 +1336,10 @@ const AgentsPage: React.FC = () => {
           confirmText={confirmDialog.confirmText}
           cancelText={confirmDialog.cancelText}
           onConfirm={confirmDialog.onConfirm}
-          onCancel={() => setConfirmDialog({ ...confirmDialog, isOpen: false })}
+          onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
           type={confirmDialog.type}
         />
-        
+
         {/* Toast Notification */}
         {toast && (
           <Toast
