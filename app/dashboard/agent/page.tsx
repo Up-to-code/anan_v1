@@ -1,14 +1,36 @@
 "use client";
-import React, { useState, useEffect, useRef, ReactNode } from 'react';
-import Head from 'next/head';
+import React, { useState, useEffect, useRef, ReactNode } from "react";
+import Head from "next/head";
 import {
-  Workflow, Settings, Play, Clock, Activity,
-  Plus, MessageCircle, Mail, Users, BarChart3,
-  X, Save, Type, FileText, Cpu, ChevronDown,
-  ChevronUp, Search, Filter, MoreVertical,
-  Download, Upload, Trash2, Edit3, AlertCircle,
-  CheckCircle, PauseCircle, Loader2
-} from 'lucide-react';
+  Workflow,
+  Settings,
+  Play,
+  Clock,
+  Activity,
+  Plus,
+  MessageCircle,
+  Mail,
+  Users,
+  BarChart3,
+  X,
+  Save,
+  Type,
+  FileText,
+  Cpu,
+  ChevronDown,
+  ChevronUp,
+  Search,
+  Filter,
+  MoreVertical,
+  Download,
+  Upload,
+  Trash2,
+  Edit3,
+  AlertCircle,
+  CheckCircle,
+  PauseCircle,
+  Loader2,
+} from "lucide-react";
 
 // Types
 interface Integration {
@@ -24,13 +46,13 @@ interface Agent {
   integrations: Integration[];
   products: string[];
   tools: string[];
-  status: 'active' | 'idle' | 'offline' | 'loading';
+  status: "active" | "idle" | "offline" | "loading";
   lastRun: string;
   executions: number;
 }
 
 type StatusConfig = {
-  [key in Agent['status']]: {
+  [key in Agent["status"]]: {
     color: string;
     label: string;
     icon: React.ComponentType<{ className?: string }>;
@@ -38,44 +60,44 @@ type StatusConfig = {
     textColor: string;
     borderColor: string;
     animate?: boolean;
-  }
+  };
 };
 
 // Constants
 const STATUS_CONFIG: StatusConfig = {
   active: {
-    color: 'bg-emerald-500',
-    label: 'Active',
+    color: "bg-emerald-500",
+    label: "Active",
     icon: CheckCircle,
-    bgColor: 'bg-emerald-50',
-    textColor: 'text-emerald-700',
-    borderColor: 'border-emerald-200'
+    bgColor: "bg-emerald-50",
+    textColor: "text-emerald-700",
+    borderColor: "border-emerald-200",
   },
   idle: {
-    color: 'bg-amber-500',
-    label: 'Idle',
+    color: "bg-amber-500",
+    label: "Idle",
     icon: PauseCircle,
-    bgColor: 'bg-amber-50',
-    textColor: 'text-amber-700',
-    borderColor: 'border-amber-200'
+    bgColor: "bg-amber-50",
+    textColor: "text-amber-700",
+    borderColor: "border-amber-200",
   },
   offline: {
-    color: 'bg-slate-400',
-    label: 'Offline',
+    color: "bg-slate-400",
+    label: "Offline",
     icon: X,
-    bgColor: 'bg-slate-50',
-    textColor: 'text-slate-700',
-    borderColor: 'border-slate-200'
+    bgColor: "bg-slate-50",
+    textColor: "text-slate-700",
+    borderColor: "border-slate-200",
   },
   loading: {
-    color: 'bg-blue-500',
-    label: 'Loading',
+    color: "bg-blue-500",
+    label: "Loading",
     icon: Loader2,
-    bgColor: 'bg-blue-50',
-    textColor: 'text-blue-700',
-    borderColor: 'border-blue-200',
-    animate: true
-  }
+    bgColor: "bg-blue-50",
+    textColor: "text-blue-700",
+    borderColor: "border-blue-200",
+    animate: true,
+  },
 };
 
 const INTEGRATION_ICONS = {
@@ -84,17 +106,39 @@ const INTEGRATION_ICONS = {
   zendesk: Users,
   crm: BarChart3,
   jira: Workflow,
-  datadog: Activity
+  datadog: Activity,
 } as const;
 
-const MODELS = ['GPT-4', 'Claude-2', 'GPT-3.5', 'Llama-2', 'Gemini Pro'] as const;
-const PRODUCTS = ['Helpdesk', 'Chat', 'Ticketing', 'Sales', 'CRM', 'Analytics', 'Billing'] as const;
-const TOOLS = ['Classifier', 'Auto-Reply', 'Routing', 'Scoring', 'Enrichment', 'Notifications', 'Invoice Gen'] as const;
+const MODELS = [
+  "GPT-4",
+  "Claude-2",
+  "GPT-3.5",
+  "Llama-2",
+  "Gemini Pro",
+] as const;
+const PRODUCTS = [
+  "Helpdesk",
+  "Chat",
+  "Ticketing",
+  "Sales",
+  "CRM",
+  "Analytics",
+  "Billing",
+] as const;
+const TOOLS = [
+  "Classifier",
+  "Auto-Reply",
+  "Routing",
+  "Scoring",
+  "Enrichment",
+  "Notifications",
+  "Invoice Gen",
+] as const;
 
 // ==================== UI Components ====================
 
 // Toast Component
-type ToastType = 'success' | 'error' | 'info';
+type ToastType = "success" | "error" | "info";
 const Toast: React.FC<{
   message: string;
   type: ToastType;
@@ -112,27 +156,30 @@ const Toast: React.FC<{
   }, [onClose]);
 
   const bgColor =
-    type === 'success'
-      ? 'bg-emerald-500'
-      : type === 'error'
-      ? 'bg-red-500'
-      : 'bg-blue-500';
+    type === "success"
+      ? "bg-emerald-500"
+      : type === "error"
+      ? "bg-red-500"
+      : "bg-blue-500";
 
   return (
     <div
       className={`fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-lg text-white shadow-lg transition-all duration-300 ${
-        isVisible ? 'translate-y-0 opacity-100' : 'translate-y-2 opacity-0'
+        isVisible ? "translate-y-0 opacity-100" : "translate-y-2 opacity-0"
       } ${bgColor}`}
     >
-      {type === 'success' ? (
+      {type === "success" ? (
         <CheckCircle className="w-5 h-5" />
-      ) : type === 'error' ? (
+      ) : type === "error" ? (
         <AlertCircle className="w-5 h-5" />
       ) : (
         <Activity className="w-5 h-5" />
       )}
       <span className="font-medium">{message}</span>
-      <button onClick={onClose} className="ml-2 hover:opacity-80 transition-opacity">
+      <button
+        onClick={onClose}
+        className="ml-2 hover:opacity-80 transition-opacity"
+      >
         <X className="w-4 h-4" />
       </button>
     </div>
@@ -148,7 +195,7 @@ const ConfirmDialog: React.FC<{
   cancelText: string;
   onConfirm: () => void;
   onCancel: () => void;
-  type?: 'danger' | 'warning' | 'info';
+  type?: "danger" | "warning" | "info";
 }> = ({
   isOpen,
   title,
@@ -157,25 +204,28 @@ const ConfirmDialog: React.FC<{
   cancelText,
   onConfirm,
   onCancel,
-  type = 'danger'
+  type = "danger",
 }) => {
   const buttonColor =
-    type === 'danger'
-      ? 'bg-red-600 hover:bg-red-700'
-      : type === 'warning'
-      ? 'bg-amber-600 hover:bg-amber-700'
-      : 'bg-blue-600 hover:bg-blue-700';
+    type === "danger"
+      ? "bg-red-600 hover:bg-red-700"
+      : type === "warning"
+      ? "bg-amber-600 hover:bg-amber-700"
+      : "bg-blue-600 hover:bg-blue-700";
 
   if (!isOpen) return null;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onCancel} />
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+        onClick={onCancel}
+      />
       <div className="relative bg-white rounded-xl max-w-md w-full p-6 border border-slate-200 shadow-xl">
         <div className="flex items-center gap-3 mb-4">
-          {type === 'danger' ? (
+          {type === "danger" ? (
             <AlertCircle className="w-6 h-6 text-red-500" />
-          ) : type === 'warning' ? (
+          ) : type === "warning" ? (
             <AlertCircle className="w-6 h-6 text-amber-500" />
           ) : (
             <AlertCircle className="w-6 h-6 text-blue-500" />
@@ -205,14 +255,22 @@ const ConfirmDialog: React.FC<{
 // ==================== Agent Components ====================
 
 // Status Indicator Component
-const StatusIndicator: React.FC<{ status: Agent['status'] }> = ({ status }) => {
+const StatusIndicator: React.FC<{ status: Agent["status"] }> = ({ status }) => {
   const config = STATUS_CONFIG[status];
   const Icon = config.icon;
 
   return (
-    <div className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bgColor} ${config.borderColor} border`}>
-      <Icon className={`w-4 h-4 ${config.textColor} ${config.animate ? 'animate-spin' : ''}`} />
-      <span className={`text-sm font-medium ${config.textColor}`}>{config.label}</span>
+    <div
+      className={`flex items-center gap-2 px-3 py-1.5 rounded-full ${config.bgColor} ${config.borderColor} border`}
+    >
+      <Icon
+        className={`w-4 h-4 ${config.textColor} ${
+          config.animate ? "animate-spin" : ""
+        }`}
+      />
+      <span className={`text-sm font-medium ${config.textColor}`}>
+        {config.label}
+      </span>
     </div>
   );
 };
@@ -236,7 +294,9 @@ const ExecutionStats: React.FC<{ agent: Agent }> = ({ agent }) => (
 );
 
 // Integration Item Component
-const IntegrationItem: React.FC<{ integration: Integration }> = ({ integration }) => {
+const IntegrationItem: React.FC<{ integration: Integration }> = ({
+  integration,
+}) => {
   const Icon = INTEGRATION_ICONS[integration.type];
 
   return (
@@ -250,7 +310,9 @@ const IntegrationItem: React.FC<{ integration: Integration }> = ({ integration }
 };
 
 // Add Integration Button Component
-const AddIntegrationButton: React.FC<{ onClick?: () => void }> = ({ onClick }) => (
+const AddIntegrationButton: React.FC<{ onClick?: () => void }> = ({
+  onClick,
+}) => (
   <button
     type="button"
     onClick={onClick}
@@ -274,9 +336,15 @@ const Section: React.FC<{
       onClick={onToggle}
       className="flex items-center gap-2 text-sm font-semibold text-slate-900 hover:text-slate-700 transition-colors"
     >
-      {expanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+      {expanded ? (
+        <ChevronUp className="w-4 h-4" />
+      ) : (
+        <ChevronDown className="w-4 h-4" />
+      )}
       {title}
-      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">{items.length}</span>
+      <span className="text-xs text-slate-500 bg-slate-100 px-2 py-1 rounded-full">
+        {items.length}
+      </span>
     </button>
     {expanded && (
       <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -300,17 +368,23 @@ const ActionButton: React.FC<{
   label: string;
   primary?: boolean;
   disabled?: boolean;
-}> = ({ icon, onClick, label, primary = false, disabled = false }) => (
+}> = ({
+  icon,
+  onClick,
+  label,
+  primary = false,
+  disabled = false,
+}) => (
   <button
     type="button"
     onClick={onClick}
     disabled={disabled}
     className={`p-2.5 rounded-lg border flex items-center justify-center transition-all ${
       disabled
-        ? 'bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed'
+        ? "bg-slate-100 border-slate-200 text-slate-400 cursor-not-allowed"
         : primary
-        ? 'bg-blue-600 border-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md'
-        : 'border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
+        ? "bg-blue-600 border-blue-600 text-white hover:bg-blue-700 shadow-sm hover:shadow-md"
+        : "border-slate-300 text-slate-600 hover:border-slate-400 hover:bg-slate-50"
     }`}
     aria-label={label}
   >
@@ -337,8 +411,8 @@ const DropdownMenu: React.FC<{
       }
     }
 
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => document.removeEventListener('mousedown', handleClickOutside);
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   const menuItems: {
@@ -346,10 +420,9 @@ const DropdownMenu: React.FC<{
     label: string;
     action: () => void;
   }[] = [
-    { icon: Edit3, label: 'Edit', action: () => onEdit(agent) },
-    // Fixed: Export now does nothing (removed console.log)
-    { icon: Download, label: 'Export', action: () => {} },
-    { icon: Trash2, label: 'Delete', action: () => onDelete(agent.id) }
+    { icon: Edit3, label: "Edit", action: () => onEdit(agent) },
+    { icon: Download, label: "Export", action: () => {} },
+    { icon: Trash2, label: "Delete", action: () => onDelete(agent.id) },
   ];
 
   return (
@@ -401,17 +474,16 @@ const AgentCard: React.FC<{
   }>({
     integrations: true,
     products: true,
-    tools: true
+    tools: true,
   });
 
-  // Fix: Remove unused handler implementations to avoid warnings.
   const handleSettings = () => {};
   const handleAddIntegration = () => {};
 
   const toggleSection = (section: keyof typeof expandedSections) => {
     setExpandedSections((prev) => ({
       ...prev,
-      [section]: !prev[section]
+      [section]: !prev[section],
     }));
   };
 
@@ -426,7 +498,9 @@ const AgentCard: React.FC<{
             </div>
             <div className="flex-1 min-w-0">
               <div className="flex items-center gap-3">
-                <h3 className="text-xl font-semibold text-slate-900 truncate">{agent.name}</h3>
+                <h3 className="text-xl font-semibold text-slate-900 truncate">
+                  {agent.name}
+                </h3>
                 <StatusIndicator status={agent.status} />
               </div>
               <p className="text-slate-600 mt-1">{agent.description}</p>
@@ -438,7 +512,7 @@ const AgentCard: React.FC<{
         <div className="flex items-center gap-2 ml-4">
           <ActionButton
             icon={
-              agent.status === 'loading' ? (
+              agent.status === "loading" ? (
                 <Loader2 className="w-4 h-4 animate-spin" />
               ) : (
                 <Play className="w-4 h-4" />
@@ -447,7 +521,7 @@ const AgentCard: React.FC<{
             onClick={() => onRun(agent.id)}
             label={`Run ${agent.name}`}
             primary
-            disabled={agent.status === 'loading'}
+            disabled={agent.status === "loading"}
           />
           <ActionButton
             icon={<Settings className="w-4 h-4" />}
@@ -466,7 +540,7 @@ const AgentCard: React.FC<{
             title="Integrations"
             items={agent.integrations.map((i) => i.name)}
             expanded={expandedSections.integrations}
-            onToggle={() => toggleSection('integrations')}
+            onToggle={() => toggleSection("integrations")}
           />
           {expandedSections.integrations && (
             <div className="flex flex-wrap gap-2 animate-in fade-in slide-in-from-bottom-2 duration-300">
@@ -487,13 +561,13 @@ const AgentCard: React.FC<{
             title="Products"
             items={agent.products}
             expanded={expandedSections.products}
-            onToggle={() => toggleSection('products')}
+            onToggle={() => toggleSection("products")}
           />
           <Section
             title="Tools"
             items={agent.tools}
             expanded={expandedSections.tools}
-            onToggle={() => toggleSection('tools')}
+            onToggle={() => toggleSection("tools")}
           />
         </div>
       </div>
@@ -514,7 +588,9 @@ const AddAgentCard: React.FC<{ onClick: () => void }> = ({ onClick }) => (
     <h3 className="text-xl font-semibold text-slate-900 mb-2 group-hover:text-slate-700 transition-colors">
       Add New Agent
     </h3>
-    <p className="text-slate-600 group-hover:text-slate-500 transition-colors">Create a new workflow agent</p>
+    <p className="text-slate-600 group-hover:text-slate-500 transition-colors">
+      Create a new workflow agent
+    </p>
   </button>
 );
 
@@ -563,14 +639,16 @@ const SearchBar: React.FC<{
 type CreateAgentDrawerProps = {
   isOpen: boolean;
   onClose: () => void;
-  onCreate: (agent: Omit<Agent, 'id' | 'status' | 'lastRun' | 'executions'>) => void;
+  onCreate: (
+    agent: Omit<Agent, "id" | "status" | "lastRun" | "executions">
+  ) => void;
   editingAgent?: Agent;
 };
 const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
   isOpen,
   onClose,
   onCreate,
-  editingAgent
+  editingAgent,
 }) => {
   const [formData, setFormData] = useState<{
     name: string;
@@ -579,33 +657,41 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
     products: string[];
     tools: string[];
   }>({
-    name: '',
-    description: '',
+    name: "",
+    description: "",
     model: MODELS[0],
     products: [],
-    tools: []
+    tools: [],
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // ----- FIX: useEffect logic to correctly control formData on edit/create -----
   useEffect(() => {
-    if (editingAgent) {
-      setFormData({
-        name: editingAgent.name,
-        description: editingAgent.description,
-        model: editingAgent.model,
-        products: editingAgent.products,
-        tools: editingAgent.tools
-      });
-    } else {
-      setFormData({
-        name: '',
-        description: '',
-        model: MODELS[0],
-        products: [],
-        tools: []
-      });
+    if (isOpen) {
+      // When open, initialize formData
+      if (editingAgent) {
+        setFormData({
+          name: editingAgent.name || "",
+          description: editingAgent.description || "",
+          model: editingAgent.model || MODELS[0],
+          products: Array.isArray(editingAgent.products)
+            ? editingAgent.products
+            : [],
+          tools: Array.isArray(editingAgent.tools) ? editingAgent.tools : [],
+        });
+      } else {
+        setFormData({
+          name: "",
+          description: "",
+          model: MODELS[0],
+          products: [],
+          tools: [],
+        });
+      }
     }
-  }, [editingAgent, isOpen]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, editingAgent]);
+  // ---------------------------------------------------------------------------
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -617,21 +703,10 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
 
     onCreate({
       ...formData,
-      integrations: []
+      integrations: [],
     });
 
     setIsSubmitting(false);
-
-    if (!editingAgent) {
-      setFormData({
-        name: '',
-        description: '',
-        model: MODELS[0],
-        products: [],
-        tools: []
-      });
-    }
-
     onClose();
   };
 
@@ -640,7 +715,7 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
       ...prev,
       products: prev.products.includes(product)
         ? prev.products.filter((p) => p !== product)
-        : [...prev.products, product]
+        : [...prev.products, product],
     }));
   };
 
@@ -649,18 +724,21 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
       ...prev,
       tools: prev.tools.includes(tool)
         ? prev.tools.filter((t) => t !== tool)
-        : [...prev.tools, tool]
+        : [...prev.tools, tool],
     }));
   };
 
   return (
     <>
       {isOpen && (
-        <div className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40" onClick={onClose} />
+        <div
+          className="fixed inset-0 bg-black/20 backdrop-blur-sm z-40"
+          onClick={onClose}
+        />
       )}
       <div
         className={`fixed top-0 right-0 h-full w-[500px] bg-white z-50 transform transition-all duration-300 ease-in-out ${
-          isOpen ? 'translate-x-0' : 'translate-x-full'
+          isOpen ? "translate-x-0" : "translate-x-full"
         }`}
       >
         {/* Header */}
@@ -675,10 +753,12 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
             </div>
             <div>
               <h2 className="text-lg font-semibold text-slate-900">
-                {editingAgent ? 'Edit Agent' : 'Create Agent'}
+                {editingAgent ? "Edit Agent" : "Create Agent"}
               </h2>
               <p className="text-sm text-slate-600">
-                {editingAgent ? 'Update agent configuration' : 'Add a new workflow agent'}
+                {editingAgent
+                  ? "Update agent configuration"
+                  : "Add a new workflow agent"}
               </p>
             </div>
           </div>
@@ -692,7 +772,10 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="h-[calc(100vh-80px)] overflow-y-auto">
+        <form
+          onSubmit={handleSubmit}
+          className="h-[calc(100vh-80px)] overflow-y-auto"
+        >
           <div className="p-6 space-y-6">
             {/* Basic Info */}
             <div className="space-y-4">
@@ -706,7 +789,10 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                   required
                   value={formData.name}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, name: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      name: e.target.value,
+                    }))
                   }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                   placeholder="e.g., Customer Support Agent"
@@ -724,7 +810,7 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                   onChange={(e) =>
                     setFormData((prev) => ({
                       ...prev,
-                      description: e.target.value
+                      description: e.target.value,
                     }))
                   }
                   rows={3}
@@ -741,7 +827,10 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                 <select
                   value={formData.model}
                   onChange={(e) =>
-                    setFormData((prev) => ({ ...prev, model: e.target.value }))
+                    setFormData((prev) => ({
+                      ...prev,
+                      model: e.target.value,
+                    }))
                   }
                   className="w-full px-3 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition-colors"
                 >
@@ -767,8 +856,8 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                     onClick={() => toggleProduct(product)}
                     className={`w-full p-3 text-left rounded-lg border transition-all ${
                       formData.products.includes(product)
-                        ? 'bg-blue-50 border-blue-200 text-blue-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                        ? "bg-blue-50 border-blue-200 text-blue-700"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -795,8 +884,8 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                     onClick={() => toggleTool(tool)}
                     className={`w-full p-3 text-left rounded-lg border transition-all ${
                       formData.tools.includes(tool)
-                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700'
-                        : 'bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300'
+                        ? "bg-emerald-50 border-emerald-200 text-emerald-700"
+                        : "bg-slate-50 border-slate-200 text-slate-700 hover:border-slate-300"
                     }`}
                   >
                     <div className="flex items-center justify-between">
@@ -829,10 +918,10 @@ const CreateAgentDrawer: React.FC<CreateAgentDrawerProps> = ({
                 {isSubmitting ? (
                   <>
                     <Loader2 className="w-4 h-4 animate-spin" />
-                    {editingAgent ? 'Updating...' : 'Creating...'}
+                    {editingAgent ? "Updating..." : "Creating..."}
                   </>
                 ) : (
-                  <>{editingAgent ? 'Update Agent' : 'Create Agent'}</>
+                  <>{editingAgent ? "Update Agent" : "Create Agent"}</>
                 )}
               </button>
             </div>
@@ -860,17 +949,17 @@ const FilterModal: React.FC<{
   }>({
     status: [],
     models: [],
-    products: []
+    products: [],
   });
 
-  const statusOptions: Agent['status'][] = ['active', 'idle', 'offline'];
+  const statusOptions: Agent["status"][] = ["active", "idle", "offline"];
 
   const handleStatusToggle = (status: string) => {
     setFilters((prev) => ({
       ...prev,
       status: prev.status.includes(status)
         ? prev.status.filter((s) => s !== status)
-        : [...prev.status, status]
+        : [...prev.status, status],
     }));
   };
 
@@ -879,7 +968,7 @@ const FilterModal: React.FC<{
       ...prev,
       models: prev.models.includes(model)
         ? prev.models.filter((m) => m !== model)
-        : [...prev.models, model]
+        : [...prev.models, model],
     }));
   };
 
@@ -888,7 +977,7 @@ const FilterModal: React.FC<{
       ...prev,
       products: prev.products.includes(product)
         ? prev.products.filter((p) => p !== product)
-        : [...prev.products, product]
+        : [...prev.products, product],
     }));
   };
 
@@ -901,7 +990,7 @@ const FilterModal: React.FC<{
     setFilters({
       status: [],
       models: [],
-      products: []
+      products: [],
     });
   };
 
@@ -909,10 +998,15 @@ const FilterModal: React.FC<{
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4">
-      <div className="fixed inset-0 bg-black/20 backdrop-blur-sm" onClick={onClose} />
+      <div
+        className="fixed inset-0 bg-black/20 backdrop-blur-sm"
+        onClick={onClose}
+      />
       <div className="relative bg-white rounded-xl max-w-2xl w-full p-6 max-h-[80vh] overflow-y-auto border border-slate-200 shadow-xl">
         <div className="flex items-center justify-between mb-6">
-          <h2 className="text-xl font-semibold text-slate-900">Filter Agents</h2>
+          <h2 className="text-xl font-semibold text-slate-900">
+            Filter Agents
+          </h2>
           <button
             type="button"
             onClick={onClose}
@@ -934,8 +1028,8 @@ const FilterModal: React.FC<{
                   onClick={() => handleStatusToggle(status)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.status.includes(status)
-                      ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                      : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      ? "bg-blue-50 border border-blue-200 text-blue-700"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   {status.charAt(0).toUpperCase() + status.slice(1)}
@@ -946,7 +1040,9 @@ const FilterModal: React.FC<{
 
           {/* Model Filter */}
           <div>
-            <h3 className="text-sm font-medium text-slate-700 mb-3">AI Model</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">
+              AI Model
+            </h3>
             <div className="flex flex-wrap gap-2">
               {MODELS.map((model) => (
                 <button
@@ -955,8 +1051,8 @@ const FilterModal: React.FC<{
                   onClick={() => handleModelToggle(model)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.models.includes(model)
-                      ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                      : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      ? "bg-blue-50 border border-blue-200 text-blue-700"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   {model}
@@ -967,7 +1063,9 @@ const FilterModal: React.FC<{
 
           {/* Product Filter */}
           <div>
-            <h3 className="text-sm font-medium text-slate-700 mb-3">Products</h3>
+            <h3 className="text-sm font-medium text-slate-700 mb-3">
+              Products
+            </h3>
             <div className="flex flex-wrap gap-2">
               {PRODUCTS.map((product) => (
                 <button
@@ -976,8 +1074,8 @@ const FilterModal: React.FC<{
                   onClick={() => handleProductToggle(product)}
                   className={`px-3 py-1.5 rounded-lg text-sm font-medium transition-all ${
                     filters.products.includes(product)
-                      ? 'bg-blue-50 border border-blue-200 text-blue-700'
-                      : 'bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100'
+                      ? "bg-blue-50 border border-blue-200 text-blue-700"
+                      : "bg-slate-50 border border-slate-200 text-slate-700 hover:bg-slate-100"
                   }`}
                 >
                   {product}
@@ -1013,41 +1111,43 @@ const FilterModal: React.FC<{
 const AgentsPage: React.FC = () => {
   const [agents, setAgents] = useState<Agent[]>([
     {
-      id: '1',
-      name: 'Customer Support',
-      description: 'Automated ticket routing and response',
-      model: 'GPT-4',
+      id: "1",
+      name: "Customer Support",
+      description: "Automated ticket routing and response",
+      model: "GPT-4",
       integrations: [
-        { name: 'Slack', type: 'slack' },
-        { name: 'Email', type: 'email' },
-        { name: 'Zendesk', type: 'zendesk' }
+        { name: "Slack", type: "slack" },
+        { name: "Email", type: "email" },
+        { name: "Zendesk", type: "zendesk" },
       ],
-      products: ['Helpdesk', 'Chat', 'Ticketing'],
-      tools: ['Classifier', 'Auto-Reply', 'Routing'],
-      status: 'active',
-      lastRun: '2 minutes ago',
-      executions: 1247
+      products: ["Helpdesk", "Chat", "Ticketing"],
+      tools: ["Classifier", "Auto-Reply", "Routing"],
+      status: "active",
+      lastRun: "2 minutes ago",
+      executions: 1247,
     },
     {
-      id: '2',
-      name: 'Sales Lead Processor',
-      description: 'Lead qualification and CRM automation',
-      model: 'Claude-2',
+      id: "2",
+      name: "Sales Lead Processor",
+      description: "Lead qualification and CRM automation",
+      model: "Claude-2",
       integrations: [
-        { name: 'CRM', type: 'crm' },
-        { name: 'Slack', type: 'slack' }
+        { name: "CRM", type: "crm" },
+        { name: "Slack", type: "slack" },
       ],
-      products: ['Sales', 'CRM', 'Analytics'],
-      tools: ['Scoring', 'Enrichment', 'Notifications'],
-      status: 'idle',
-      lastRun: '1 hour ago',
-      executions: 892
-    }
+      products: ["Sales", "CRM", "Analytics"],
+      tools: ["Scoring", "Enrichment", "Notifications"],
+      status: "idle",
+      lastRun: "1 hour ago",
+      executions: 892,
+    },
   ]);
 
   const [isDrawerOpen, setIsDrawerOpen] = useState(false);
-  const [editingAgent, setEditingAgent] = useState<Agent | undefined>(undefined);
-  const [searchTerm, setSearchTerm] = useState('');
+  const [editingAgent, setEditingAgent] = useState<Agent | undefined>(
+    undefined
+  );
+  const [searchTerm, setSearchTerm] = useState("");
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
   const [filters, setFilters] = useState<{
     status: string[];
@@ -1056,9 +1156,11 @@ const AgentsPage: React.FC = () => {
   }>({
     status: [],
     models: [],
-    products: []
+    products: [],
   });
-  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(null);
+  const [toast, setToast] = useState<{ message: string; type: ToastType } | null>(
+    null
+  );
   const [confirmDialog, setConfirmDialog] = useState<{
     isOpen: boolean;
     title: string;
@@ -1066,19 +1168,19 @@ const AgentsPage: React.FC = () => {
     confirmText: string;
     cancelText: string;
     onConfirm: () => void;
-    type?: 'danger' | 'warning' | 'info';
+    type?: "danger" | "warning" | "info";
   }>({
     isOpen: false,
-    title: '',
-    message: '',
-    confirmText: '',
-    cancelText: '',
+    title: "",
+    message: "",
+    confirmText: "",
+    cancelText: "",
     onConfirm: () => {},
-    type: 'danger'
+    type: "danger",
   });
 
   const handleCreateAgent = (
-    newAgentData: Omit<Agent, 'id' | 'status' | 'lastRun' | 'executions'>
+    newAgentData: Omit<Agent, "id" | "status" | "lastRun" | "executions">
   ) => {
     if (editingAgent) {
       setAgents((prev) =>
@@ -1088,17 +1190,17 @@ const AgentsPage: React.FC = () => {
             : agent
         )
       );
-      setToast({ message: 'Agent updated successfully', type: 'success' });
+      setToast({ message: "Agent updated successfully", type: "success" });
     } else {
       const newAgent: Agent = {
         ...newAgentData,
         id: Date.now().toString(),
-        status: 'idle',
-        lastRun: 'Never',
-        executions: 0
+        status: "idle",
+        lastRun: "Never",
+        executions: 0,
       };
       setAgents((prev) => [...prev, newAgent]);
-      setToast({ message: 'Agent created successfully', type: 'success' });
+      setToast({ message: "Agent created successfully", type: "success" });
     }
     setEditingAgent(undefined);
   };
@@ -1114,23 +1216,23 @@ const AgentsPage: React.FC = () => {
 
     setConfirmDialog({
       isOpen: true,
-      title: 'Delete Agent',
+      title: "Delete Agent",
       message: `Are you sure you want to delete "${agent.name}"? This action cannot be undone.`,
-      confirmText: 'Delete',
-      cancelText: 'Cancel',
+      confirmText: "Delete",
+      cancelText: "Cancel",
       onConfirm: () => {
         setAgents((prev) => prev.filter((agent) => agent.id !== id));
-        setToast({ message: 'Agent deleted successfully', type: 'success' });
+        setToast({ message: "Agent deleted successfully", type: "success" });
         setConfirmDialog((prev) => ({ ...prev, isOpen: false }));
       },
-      type: 'danger'
+      type: "danger",
     });
   };
 
   const handleRunAgent = async (id: string) => {
     setAgents((prev) =>
       prev.map((agent) =>
-        agent.id === id ? { ...agent, status: 'loading' } : agent
+        agent.id === id ? { ...agent, status: "loading" } : agent
       )
     );
 
@@ -1141,15 +1243,15 @@ const AgentsPage: React.FC = () => {
         agent.id === id
           ? {
               ...agent,
-              status: 'active',
-              lastRun: 'Just now',
-              executions: agent.executions + 1
+              status: "active",
+              lastRun: "Just now",
+              executions: agent.executions + 1,
             }
           : agent
       )
     );
 
-    setToast({ message: 'Agent started successfully', type: 'success' });
+    setToast({ message: "Agent started successfully", type: "success" });
   };
 
   const handleApplyFilter = (newFilters: typeof filters) => {
@@ -1157,7 +1259,7 @@ const AgentsPage: React.FC = () => {
   };
 
   const handleImport = () => {
-    setToast({ message: 'Import feature coming soon', type: 'info' });
+    setToast({ message: "Import feature coming soon", type: "info" });
   };
 
   const filteredAgents = agents.filter((agent) => {
@@ -1192,7 +1294,9 @@ const AgentsPage: React.FC = () => {
         <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
           {/* Header */}
           <div className="mb-8">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Workflow Agents</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">
+              Workflow Agents
+            </h1>
             <p className="text-slate-600">
               Manage and monitor your automated workflow agents
             </p>
@@ -1276,11 +1380,17 @@ const AgentsPage: React.FC = () => {
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Search className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents found</h3>
-              <p className="text-slate-600">Try adjusting your search terms or filters</p>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No agents found
+              </h3>
+              <p className="text-slate-600">
+                Try adjusting your search terms or filters
+              </p>
               <button
                 type="button"
-                onClick={() => setFilters({ status: [], models: [], products: [] })}
+                onClick={() =>
+                  setFilters({ status: [], models: [], products: [] })
+                }
                 className="mt-4 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Clear Filters
@@ -1294,7 +1404,9 @@ const AgentsPage: React.FC = () => {
               <div className="w-16 h-16 bg-slate-100 rounded-full flex items-center justify-center mx-auto mb-4">
                 <Workflow className="w-8 h-8 text-slate-400" />
               </div>
-              <h3 className="text-lg font-semibold text-slate-900 mb-2">No agents yet</h3>
+              <h3 className="text-lg font-semibold text-slate-900 mb-2">
+                No agents yet
+              </h3>
               <p className="text-slate-600 mb-4">
                 Create your first workflow agent to get started
               </p>
@@ -1336,7 +1448,9 @@ const AgentsPage: React.FC = () => {
           confirmText={confirmDialog.confirmText}
           cancelText={confirmDialog.cancelText}
           onConfirm={confirmDialog.onConfirm}
-          onCancel={() => setConfirmDialog((prev) => ({ ...prev, isOpen: false }))}
+          onCancel={() =>
+            setConfirmDialog((prev) => ({ ...prev, isOpen: false }))
+          }
           type={confirmDialog.type}
         />
 

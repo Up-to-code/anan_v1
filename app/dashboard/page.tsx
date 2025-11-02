@@ -30,6 +30,8 @@ import {
   TrendingUp,
   Shield,
   Download,
+  Plus,
+  Bot,
 } from 'lucide-react';
 
 // ============================================
@@ -127,6 +129,70 @@ interface ClientsTabProps {
 interface CostsTabProps {
   isLoading: boolean;
 }
+
+// Empty State Component - Matches the exact same UI style
+const EmptyState = () => (
+  <div className="bg-white border border-slate-200 rounded-lg p-8">
+    {/* 30% Overlay Background */}
+    <div className="absolute inset-0 bg-blue-50 opacity-30 rounded-lg -z-10"></div>
+    
+    <div className="relative text-center py-12">
+      {/* Icon */}
+      <div className="w-20 h-20 bg-blue-100 rounded-full flex items-center justify-center mb-6 mx-auto">
+        <Bot className="w-10 h-10 text-blue-600" />
+      </div>
+      
+      {/* Title */}
+      <h2 className="text-3xl font-bold text-slate-900 mb-4">
+        Create your first agent
+      </h2>
+      
+      {/* Subtitle */}
+      <p className="text-lg text-slate-600 mb-8 max-w-md mx-auto">
+        Get started by creating your first AI agent to analyze your data and provide insights.
+      </p>
+      
+      {/* Action Buttons */}
+      <div className="flex flex-col sm:flex-row gap-4 justify-center items-center mb-12">
+        <button className="px-6 py-3 bg-blue-600 text-white rounded-lg font-medium flex items-center gap-2 hover:bg-blue-700 transition-colors">
+          <Plus className="w-5 h-5" />
+          Create New Agent
+        </button>
+        <button className="px-6 py-3 border border-slate-300 text-slate-700 rounded-lg font-medium hover:bg-slate-50 transition-colors">
+          Learn More
+        </button>
+      </div>
+    </div>
+    
+    {/* Bottom Section */}
+    <div className="border-t border-slate-200 pt-8">
+      <h3 className="text-lg font-semibold text-slate-900 mb-6 text-center">What you can do with agents:</h3>
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Brain className="w-6 h-6 text-blue-600" />
+          </div>
+          <h4 className="font-semibold text-slate-900 mb-2">Analyze Data</h4>
+          <p className="text-sm text-slate-600">Analyze data patterns and trends automatically</p>
+        </div>
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <TrendingUp className="w-6 h-6 text-blue-600" />
+          </div>
+          <h4 className="font-semibold text-slate-900 mb-2">Generate Insights</h4>
+          <p className="text-sm text-slate-600">Get automated recommendations and insights</p>
+        </div>
+        <div className="text-center">
+          <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-3">
+            <Shield className="w-6 h-6 text-blue-600" />
+          </div>
+          <h4 className="font-semibold text-slate-900 mb-2">Monitor Performance</h4>
+          <p className="text-sm text-slate-600">Track performance metrics in real-time</p>
+        </div>
+      </div>
+    </div>
+  </div>
+);
 
 // Chart Skeleton Loading Component
 const ChartSkeleton = ({ height = 300 }: ChartSkeletonProps) => (
@@ -567,6 +633,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
   const [timeFilter, setTimeFilter] = useState('30D');
+  const [hasAgents, setHasAgents] = useState(false); // Set to false to show empty state
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);
@@ -586,6 +653,29 @@ export default function Dashboard() {
     alert('Report exported successfully!');
     setIsExporting(false);
   };
+
+  // If no agents, show empty state instead of the main dashboard content
+  if (!hasAgents) {
+    return (
+      <div className="min-h-screen bg-slate-50 p-6">
+        <div className="max-w-7xl mx-auto space-y-6">
+          <Header 
+            isExporting={isExporting} 
+            handleExport={handleExport}
+            timeFilter={timeFilter}
+            setTimeFilter={setTimeFilter}
+          />
+          <StatsGrid isLoading={isLoading} />
+          
+          {/* Empty State replaces the tab navigation and chart content */}
+          <EmptyState />
+          
+          {/* Keep AI Insights for consistency */}
+          <AIInsights />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-slate-50 p-6">
