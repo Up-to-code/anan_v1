@@ -1,26 +1,25 @@
 "use client";
 import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { usePathname, useRouter } from 'next/navigation';
-
-// Icons
 import {
   BarChart3, AirVent, Code, Package, CreditCard, 
   Bell, Settings, User, Menu, X, Zap, Crown, Sparkles,
   HelpCircle, LogOut, MessageCircle, Users, ShoppingCart,
-  ChevronDown
+  ChevronDown,
+  CalendarDays
 } from 'lucide-react';
 
 interface AppLayoutProps {
   children: React.ReactNode;
 }
 
-// All routes under /dashboard
 const navigation = [
   { name: 'Dashboard', href: '/dashboard', icon: BarChart3 },
   { name: 'Agents', href: '/dashboard/agents', icon: AirVent },
   { name: 'Integrations', href: '/dashboard/integrations', icon: Code },
   { name: 'Products', href: '/dashboard/products', icon: Package },
   { name: 'Contacts', href: '/dashboard/contacts', icon: Users },
+  { name: 'Bookings', href: '/dashboard/bookings', icon: CalendarDays },
   { name: 'Messages', href: '/dashboard/messages', icon: MessageCircle },
   { name: 'Orders', href: '/dashboard/orders', icon: ShoppingCart },
   { name: 'Billing', href: '/dashboard/billing', icon: CreditCard },
@@ -34,13 +33,13 @@ const user = {
   avatar: 'AJ'
 };
 
-const notificationItems = [
-  { label: 'New message from John', time: '5 min ago' },
-  { label: 'Order #1234 completed', time: '1 hour ago' },
-  { label: 'System update available', time: '2 hours ago' },
+const notifications = [
+  { id: 1, label: 'New message from John', time: '5 min ago' },
+  { id: 2, label: 'Order #1234 completed', time: '1 hour ago' },
+  { id: 3, label: 'System update available', time: '2 hours ago' },
 ];
 
-const profileItems = [
+const profileMenu = [
   { label: 'Profile', icon: User, href: '/dashboard/profile' },
   { label: 'Settings', icon: Settings, href: '/dashboard/settings' },
   { label: 'Help & Support', icon: HelpCircle, href: '/dashboard/help' },
@@ -49,330 +48,265 @@ const profileItems = [
 
 export function AppLayout({ children }: AppLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
-  const [isMediumScreen, setIsMediumScreen] = useState(false);
   const [notificationsOpen, setNotificationsOpen] = useState(false);
   const [profileOpen, setProfileOpen] = useState(false);
   
   const router = useRouter();
   const pathname = usePathname();
-
-  // Refs for dropdowns
   const notificationsRef = useRef<HTMLDivElement>(null);
   const profileRef = useRef<HTMLDivElement>(null);
 
-  // Close dropdowns when clicking outside - FIXED VERSION
+  // Handle screen resize
   useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      const target = event.target as Node;
+    const handleResize = () => {
+      if (window.innerWidth < 1024) {
+        setSidebarOpen(false);
+      }
+    };
+
+    handleResize();
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      const target = e.target as Node;
       
-      // Check if click is outside notifications dropdown
-      if (notificationsOpen && 
-          notificationsRef.current && 
-          !notificationsRef.current.contains(target)) {
+      if (notificationsOpen && notificationsRef.current && !notificationsRef.current.contains(target)) {
         setNotificationsOpen(false);
       }
       
-      // Check if click is outside profile dropdown
-      if (profileOpen && 
-          profileRef.current && 
-          !profileRef.current.contains(target)) {
+      if (profileOpen && profileRef.current && !profileRef.current.contains(target)) {
         setProfileOpen(false);
       }
     };
 
     document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, [notificationsOpen, profileOpen]);
 
-  // Close dropdowns when route changes
+  // Close dropdowns on route change
   useEffect(() => {
-    if (notificationsOpen || profileOpen) {
-      setNotificationsOpen(false);
-      setProfileOpen(false);
-    }
-  }, [pathname, notificationsOpen, profileOpen]);
-
-  // Get current page title for header
-  const getCurrentPageTitle = useCallback(() => {
-    const currentNav = navigation.find(item => 
-      pathname === item.href || pathname?.startsWith(item.href + '/')
-    );
-    return currentNav?.name || 'Dashboard';
+    setNotificationsOpen(false);
+    setProfileOpen(false);
   }, [pathname]);
 
-  // Detect screen size and adjust sidebar
-  useEffect(() => {
-    const checkScreenSize = () => {
-      const medium = window.innerWidth >= 768 && window.innerWidth <= 1024;
-      setIsMediumScreen(medium);
-      if (medium) {
-        setSidebarOpen(false);
-      } else {
-        setSidebarOpen(true);
-      }
-    };
+  const getCurrentPageTitle = useCallback(() => {
+    const current = navigation.find(item => 
+      pathname === item.href || pathname?.startsWith(item.href + '/')
+    );
+    return current?.name || 'Dashboard';
+  }, [pathname]);
 
-    if (typeof window !== 'undefined') {
-      checkScreenSize();
-      window.addEventListener('resize', checkScreenSize);
-      
-      return () => window.removeEventListener('resize', checkScreenSize);
-    }
-  }, []);
-
-  // Toggle functions
-  const toggleNotifications = useCallback(() => {
-    setNotificationsOpen(prev => !prev);
+  const toggleNotifications = () => {
+    setNotificationsOpen(!notificationsOpen);
     setProfileOpen(false);
-  }, []);
-
-  const toggleProfile = useCallback(() => {
-    setProfileOpen(prev => !prev);
-    setNotificationsOpen(false);
-  }, []);
-
-  const toggleSidebar = useCallback(() => {
-    setSidebarOpen(prev => !prev);
-  }, []);
-
-  const handleUpgrade = () => {
-    console.log('Upgrade to Pro clicked');
   };
 
-  const handleSignOut = () => {
-    console.log('Sign out clicked');
-  };
-
-  const handleNotificationClick = (item: { label: string; time: string }) => {
-    console.log('Notification clicked:', item);
-    // Don't close dropdown when clicking notification items
-  };
-
-  const handleViewAllNotifications = () => {
-    console.log('View all notifications clicked');
+  const toggleProfile = () => {
+    setProfileOpen(!profileOpen);
     setNotificationsOpen(false);
   };
 
-  const handleProfileItemClick = (href: string, action?: string) => {
+  const handleProfileAction = (href?: string, action?: string) => {
     if (action === 'logout') {
-      handleSignOut();
-    } else {
+      console.log('Signing out...');
+      // Add logout logic here
+    } else if (href) {
       router.push(href);
     }
     setProfileOpen(false);
   };
 
-  // Responsive sidebar width
-  const getSidebarWidth = () => {
-    if (!sidebarOpen) return 'w-16 md:w-20';
-    if (isMediumScreen) return 'w-56';
-    return 'w-64';
+  const isActiveRoute = (href: string) => {
+    if (href === '/dashboard') {
+      return pathname === '/dashboard';
+    }
+    return pathname === href || pathname?.startsWith(href + '/');
   };
 
   return (
     <div className="flex h-screen bg-slate-50">
       {/* Sidebar */}
-      <div className={`bg-slate-900 ${getSidebarWidth()} transition-all duration-300 flex flex-col`}>
+      <aside className={`bg-slate-900 ${sidebarOpen ? 'w-64' : 'w-20'} transition-all duration-300 flex flex-col`}>
         
-        {/* Header */}
+        {/* Logo Header */}
         <div className="p-4 border-b border-slate-700">
           <div className="flex items-center justify-between">
             {sidebarOpen && (
-              <div className="flex items-center space-x-3">
+              <div className="flex items-center gap-3">
                 <div className="w-8 h-8 bg-blue-600 rounded-lg flex items-center justify-center">
-                  <Zap className="w-4 h-4 text-white" />
+                  <Zap className="w-5 h-5 text-white" />
                 </div>
                 <div>
                   <h1 className="text-white text-lg font-bold">ChatConnect</h1>
-                  <p className="text-slate-400 text-sm">Dashboard</p>
+                  <p className="text-slate-400 text-xs">Dashboard</p>
                 </div>
               </div>
             )}
             <button 
-              onClick={toggleSidebar}
+              onClick={() => setSidebarOpen(!sidebarOpen)}
               className="text-slate-400 hover:text-white p-2 rounded-lg hover:bg-slate-800 transition-colors"
+              aria-label="Toggle sidebar"
             >
-              {sidebarOpen ? <X className="w-4 h-4" /> : <Menu className="w-4 h-4" />}
+              {sidebarOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
             </button>
           </div>
         </div>
 
-        {/* Navigation - All dashboard routes */}
-        <div className="flex-1 p-3 space-y-1 overflow-y-auto">
+        {/* Navigation */}
+        <nav className="flex-1 p-3 space-y-1 overflow-y-auto">
           {navigation.map((item) => {
             const Icon = item.icon;
-            // Only show blue background for exact /dashboard path
-            const isActive = item.href === '/dashboard' 
-              ? pathname === '/dashboard'  // Only exact match for dashboard
-              : pathname === item.href || pathname?.startsWith(item.href + '/');
+            const active = isActiveRoute(item.href);
             
             return (
               <button
-                key={item.name}
+                key={item.href}
                 onClick={() => router.push(item.href)}
-                className={`flex items-center w-full p-3 rounded-lg text-base transition-all ${
-                  isActive
-                    ? 'bg-blue-600 text-white shadow-lg' // Blue only for active items
+                className={`flex items-center w-full px-3 py-3 rounded-lg transition-all ${
+                  active
+                    ? 'bg-blue-600 text-white shadow-lg' 
                     : 'text-slate-300 hover:text-white hover:bg-slate-800'
                 }`}
+                aria-current={active ? 'page' : undefined}
               >
-                <Icon className="w-5 h-5 mr-3" />
-                {sidebarOpen && (
-                  <span className="font-medium">{item.name}</span>
-                )}
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {sidebarOpen && <span className="ml-3 font-medium">{item.name}</span>}
               </button>
             );
           })}
-        </div>
+        </nav>
 
         {/* Upgrade Card */}
         {sidebarOpen && (
           <div className="px-3 pb-3">
-            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4">
-              <div className="text-center">
-                <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
-                  <Crown className="w-5 h-5 text-white" />
-                </div>
-                <h3 className="text-white font-bold text-sm mb-1">Upgrade to Pro</h3>
-                <p className="text-white/90 text-xs mb-3">
-                  Unlock all features
-                </p>
-                <button
-                  onClick={handleUpgrade}
-                  className="w-full bg-white text-blue-600 hover:bg-slate-100 font-bold rounded-lg py-2 text-xs transition-colors"
-                >
-                  <Sparkles className="w-3 h-3 inline mr-1" />
-                  Upgrade Now
-                </button>
+            <div className="bg-gradient-to-br from-blue-500 to-blue-600 rounded-xl p-4 text-center">
+              <div className="w-10 h-10 bg-white/20 rounded-full flex items-center justify-center mx-auto mb-2">
+                <Crown className="w-5 h-5 text-white" />
               </div>
+              <h3 className="text-white font-bold text-sm mb-1">Upgrade to Pro</h3>
+              <p className="text-white/90 text-xs mb-3">Unlock all features</p>
+              <button className="w-full bg-white text-blue-600 hover:bg-slate-100 font-bold rounded-lg py-2 text-xs transition-colors flex items-center justify-center gap-1">
+                <Sparkles className="w-3 h-3" />
+                Upgrade Now
+              </button>
             </div>
           </div>
         )}
 
         {/* User Section */}
         <div className="p-3 border-t border-slate-700">
-          <div className="flex items-center space-x-2 p-2 bg-slate-800 rounded-lg">
-            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
+          <div className="flex items-center gap-2 p-2 bg-slate-800 rounded-lg">
+            <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
               {user.avatar}
             </div>
             {sidebarOpen && (
               <div className="flex-1 min-w-0">
-                <p className="text-white text-sm font-bold truncate">{user.name}</p>
+                <p className="text-white text-sm font-medium truncate">{user.name}</p>
                 <p className="text-slate-400 text-xs truncate">{user.role}</p>
               </div>
             )}
           </div>
         </div>
-      </div>
+      </aside>
 
       {/* Main Content */}
-      <div className="flex-1 flex flex-col overflow-hidden min-w-0">
+      <div className="flex-1 flex flex-col overflow-hidden">
         
         {/* Header */}
         <header className="bg-white border-b border-slate-200 shadow-sm">
-          <div className="px-4 py-3 md:px-6 md:py-4">
+          <div className="px-4 sm:px-6 py-3 sm:py-4">
             <div className="flex items-center justify-between">
               
-              {/* Left side */}
-              <div className="flex items-center space-x-3 md:space-x-4">
+              {/* Left: Menu & Title */}
+              <div className="flex items-center gap-3">
                 <button 
-                  onClick={toggleSidebar}
-                  className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                  onClick={() => setSidebarOpen(!sidebarOpen)}
+                  className="p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors lg:hidden"
+                  aria-label="Toggle sidebar"
                 >
-                  <Menu className="w-4 h-4 md:w-5 md:h-5" />
+                  <Menu className="w-5 h-5" />
                 </button>
-                
-                {/* Page Title - Clean and simple */}
-                <div>
-                  <h1 className="text-lg md:text-xl font-bold text-slate-900">
-                    {getCurrentPageTitle()}
-                  </h1>
-                </div>
+                <h1 className="text-xl font-bold text-slate-900">
+                  {getCurrentPageTitle()}
+                </h1>
               </div>
 
-              {/* Right side - Dropdown menus */}
-              <div className="flex items-center space-x-2 md:space-x-3">
+              {/* Right: Notifications & Profile */}
+              <div className="flex items-center gap-2">
                 
-                {/* Notifications Dropdown */}
+                {/* Notifications */}
                 <div className="relative" ref={notificationsRef}>
                   <button 
                     onClick={toggleNotifications}
                     className="relative p-2 text-slate-600 hover:text-slate-900 hover:bg-slate-100 rounded-lg transition-colors"
+                    aria-label="Notifications"
                   >
-                    <Bell className="w-4 h-4 md:w-5 md:h-5" />
-                    <div className="absolute top-1 right-1 w-2 h-2 bg-red-500 rounded-full"></div>
+                    <Bell className="w-5 h-5" />
+                    <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
                   </button>
                   
-                  {/* Dropdown Menu */}
                   {notificationsOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                    <div className="absolute right-0 top-full mt-2 w-80 bg-white rounded-xl shadow-xl border border-slate-200 z-50">
                       <div className="p-4 border-b border-slate-200">
                         <h3 className="font-bold text-slate-900">Notifications</h3>
-                        <p className="text-slate-600 text-sm">You have {notificationItems.length} new notifications</p>
+                        <p className="text-slate-600 text-sm">{notifications.length} unread</p>
                       </div>
                       
-                      <div className="max-h-96 overflow-y-auto">
-                        {notificationItems.map((item, index) => (
-                          <div 
-                            key={index} 
-                            onClick={() => handleNotificationClick(item)}
-                            className="p-4 border-b border-slate-100 hover:bg-slate-50 cursor-pointer transition-colors"
+                      <div className="max-h-80 overflow-y-auto">
+                        {notifications.map((item) => (
+                          <button 
+                            key={item.id}
+                            className="w-full p-4 border-b border-slate-100 hover:bg-slate-50 text-left transition-colors"
                           >
                             <p className="text-sm font-medium text-slate-900">{item.label}</p>
                             <p className="text-xs text-slate-500 mt-1">{item.time}</p>
-                          </div>
+                          </button>
                         ))}
                       </div>
                       
-                      <div className="p-3 border-t border-slate-200">
-                        <button 
-                          onClick={handleViewAllNotifications}
-                          className="w-full text-center text-sm text-blue-600 hover:text-blue-700 font-medium py-2"
-                        >
-                          View all notifications
-                        </button>
-                      </div>
+                      <button className="w-full p-3 text-sm text-blue-600 hover:text-blue-700 font-medium border-t border-slate-200">
+                        View all notifications
+                      </button>
                     </div>
                   )}
                 </div>
 
-                {/* Profile Dropdown */}
+                {/* Profile */}
                 <div className="relative" ref={profileRef}>
                   <button 
                     onClick={toggleProfile}
-                    className="flex items-center space-x-2 p-1 md:p-2 hover:bg-slate-100 rounded-lg transition-colors"
+                    className="flex items-center gap-2 p-1.5 hover:bg-slate-100 rounded-lg transition-colors"
+                    aria-label="Profile menu"
                   >
-                    <div className="w-8 h-8 md:w-10 md:h-10 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm md:text-base">
+                    <div className="w-9 h-9 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold text-sm">
                       {user.avatar}
                     </div>
-                    
-                    {/* User info - Hidden on small screens */}
                     <div className="hidden md:block text-left">
-                      <p className="text-sm md:text-base font-bold text-slate-900">{user.name}</p>
-                      <p className="text-slate-600 text-xs md:text-sm">{user.role}</p>
+                      <p className="text-sm font-bold text-slate-900">{user.name}</p>
+                      <p className="text-xs text-slate-600">{user.role}</p>
                     </div>
-                    
-                    <ChevronDown className="w-4 h-4 text-slate-400" />
+                    <ChevronDown className="w-4 h-4 text-slate-400 hidden md:block" />
                   </button>
                   
-                  {/* Dropdown Menu */}
                   {profileOpen && (
-                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-lg shadow-lg border border-slate-200 z-50">
+                    <div className="absolute right-0 top-full mt-2 w-56 bg-white rounded-xl shadow-xl border border-slate-200 z-50">
                       <div className="p-4 border-b border-slate-200">
                         <p className="font-bold text-slate-900">{user.name}</p>
-                        <p className="text-slate-600 text-sm">{user.email}</p>
+                        <p className="text-sm text-slate-600">{user.email}</p>
                       </div>
                       
                       <div className="p-2">
-                        {profileItems.map((item, index) => {
+                        {profileMenu.map((item) => {
                           const Icon = item.icon;
                           return (
                             <button
-                              key={index}
-                              onClick={() => handleProfileItemClick(item.href, (item as any).action)}
-                              className="flex items-center w-full p-3 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors text-left"
+                              key={item.label}
+                              onClick={() => handleProfileAction(item.href, (item as any).action)}
+                              className="flex items-center w-full p-3 text-slate-700 hover:bg-slate-100 rounded-lg transition-colors"
                             >
                               <Icon className="w-4 h-4 mr-3 text-slate-500" />
                               <span className="text-sm">{item.label}</span>
@@ -388,9 +322,9 @@ export function AppLayout({ children }: AppLayoutProps) {
           </div>
         </header>
 
-        {/* Main Content Area */}
-        <main className="flex-1 overflow-auto bg-slate-50/50">
-          <div className="p-4 md:p-6 lg:p-8">
+        {/* Page Content */}
+        <main className="flex-1 overflow-auto bg-slate-50">
+          <div className="p-4 sm:p-6 lg:p-8">
             {children}
           </div>
         </main>

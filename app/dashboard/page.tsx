@@ -608,7 +608,7 @@ export default function Dashboard() {
   const [activeTab, setActiveTab] = useState('overview');
   const [isExporting, setIsExporting] = useState(false);
   const [timeFilter, setTimeFilter] = useState('30D');
-  const [hasAgents, setHasAgents] = useState(false); // Set to false to show empty state
+  const [hasAgents, setHasAgents] = useState(true); // Set to false to show empty state
 
   useEffect(() => {
     const timer = setTimeout(() => setIsLoading(false), 1000);

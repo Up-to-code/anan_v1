@@ -1,0 +1,126 @@
+graph TB
+    subgraph AUTH["🔐 AUTHENTICATION & SECURITY"]
+        User["<b>User</b><br/>━━━━━━━━━━━━━━<br/>PK: id (cuid)<br/>UK: email<br/>━━━━━━━━━━━━━━<br/>Fields:<br/>• name, email, image<br/>• role: UserRole<br/>• isActive, emailVerified<br/>• lastLoginAt<br/>• deletedAt (soft delete)<br/>━━━━━━━━━━━━━━<br/>Indexes:<br/>✓ email, isActive<br/>✓ createdAt, deletedAt"]
+        
+        Session["<b>Session</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: token<br/>FK: userId → User<br/>━━━━━━━━━━━━━━<br/>• expiresAt<br/>• ipAddress<br/>• userAgent<br/>━━━━━━━━━━━━━━<br/>Cascade: DELETE<br/>Indexes: userId, expiresAt"]
+        
+        Account["<b>Account</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: userId → User<br/>UK: providerId + accountId<br/>━━━━━━━━━━━━━━<br/>OAuth Fields:<br/>• accessToken (text)<br/>• refreshToken (text)<br/>• idToken (text)<br/>• scope, expiresAt<br/>━━━━━━━━━━━━━━<br/>Cascade: DELETE"]
+        
+        Verification["<b>Verification</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: identifier + value<br/>━━━━━━━━━━━━━━<br/>• identifier (email/phone)<br/>• value (code/token)<br/>• expiresAt<br/>━━━━━━━━━━━━━━<br/>For: email verification,<br/>password reset"]
+    end
+
+    subgraph ORG["🏢 MULTI-TENANT ORGANIZATION"]
+        Organization["<b>Organization</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: slug<br/>━━━━━━━━━━━━━━<br/>Billing:<br/>• plan: PlanType<br/>• billingEmail<br/>• maxProjects, maxMembers<br/>• maxApiKeys<br/>━━━━━━━━━━━━━━<br/>Contact:<br/>• website, phone, address<br/>━━━━━━━━━━━━━━<br/>Soft Delete: deletedAt"]
+        
+        CustomRole["<b>CustomRole</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: organizationId<br/>UK: orgId + name<br/>━━━━━━━━━━━━━━<br/>• name, description<br/>• permissions (JSON)<br/>• isActive, isDefault<br/>━━━━━━━━━━━━━━<br/>JSON Structure:<br/>{<br/>  'projects': {<br/>    'create': true,<br/>    'read': true,<br/>    'update': false<br/>  },<br/>  'billing': {...}<br/>}"]
+        
+        OrgMember["<b>OrganizationMember</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: userId, organizationId<br/>FK: customRoleId (nullable)<br/>UK: userId + organizationId<br/>━━━━━━━━━━━━━━<br/>• role: OrganizationRole<br/>• isActive<br/>• invitedBy, invitedAt<br/>━━━━━━━━━━━━━━<br/>Role Priority:<br/>1. customRole (if set)<br/>2. role (fallback)"]
+        
+        Project["<b>Project</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: organizationId<br/>━━━━━━━━━━━━━━<br/>Settings:<br/>• name, description<br/>• environment (prod/staging)<br/>• timezone, alertsEnabled<br/>• isActive<br/>━━━━━━━━━━━━━━<br/>Soft Delete: deletedAt<br/>━━━━━━━━━━━━━━<br/>Has: metrics, costs,<br/>alerts, insights"]
+    end
+
+    subgraph API["🔑 API MANAGEMENT"]
+        ApiKey["<b>ApiKey</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: key<br/>FK: userId, organizationId<br/>FK: projectId (nullable)<br/>━━━━━━━━━━━━━━<br/>Security:<br/>• key (hashed)<br/>• prefix (visible)<br/>• allowedIps (array)<br/>• rateLimit<br/>━━━━━━━━━━━━━━<br/>Lifecycle:<br/>• isActive, lastUsed<br/>• expiresAt<br/>• permissions (JSON)"]
+        
+        AiModel["<b>AiModel</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: name<br/>━━━━━━━━━━━━━━<br/>Details:<br/>• provider, modelFamily<br/>• contextSize, maxTokens<br/>• isActive<br/>━━━━━━━━━━━━━━<br/>Pricing:<br/>• costPer1kInputTokens<br/>• costPer1kOutputTokens<br/>• (Decimal 10,6)<br/>━━━━━━━━━━━━━━<br/>• capabilities (JSON)"]
+    end
+
+    subgraph METRICS["📊 ANALYTICS & MONITORING"]
+        UsageMetric["<b>UsageMetric</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId, modelId<br/>FK: apiKeyId (nullable)<br/>━━━━━━━━━━━━━━<br/>Tokens:<br/>• tokenCount, promptTokens<br/>• completionTokens<br/>━━━━━━━━━━━━━━<br/>Performance:<br/>• requestCount, userCount<br/>• avgLatency, p95, p99<br/>• errorCount, successRate<br/>━━━━━━━━━━━━━━<br/>Financial:<br/>• cost (Decimal 10,4)<br/>━━━━━━━━━━━━━━<br/>Period: HOURLY/DAILY/<br/>WEEKLY/MONTHLY/YEARLY"]
+        
+        CostRecord["<b>CostRecord</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId, modelId<br/>UK: project+model+period<br/>━━━━━━━━━━━━━━<br/>Breakdown (Decimal 10,2):<br/>• developmentCost<br/>• inferenceCost<br/>• maintenanceCost<br/>• totalCost<br/>━━━━━━━━━━━━━━<br/>Budget:<br/>• budgetLimit<br/>• budgetUsed (%)<br/>• forecastedCost<br/>━━━━━━━━━━━━━━<br/>• currency, notes"]
+        
+        PlatformPerf["<b>PlatformPerformance</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId (nullable)<br/>━━━━━━━━━━━━━━<br/>Metrics (Decimal 5,2 %):<br/>• uptime<br/>• reliability<br/>• errorRate<br/>━━━━━━━━━━━━━━<br/>Performance:<br/>• avgResponseTime<br/>• requestsPerSecond<br/>• concurrentRequests<br/>• rateLimitRemaining"]
+        
+        ClientActivity["<b>ClientActivity</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId<br/>UK: project+date+period<br/>━━━━━━━━━━━━━━<br/>Users:<br/>• activeUsers<br/>• newUsers<br/>• returningUsers<br/>━━━━━━━━━━━━━━<br/>Engagement:<br/>• requests, tokens<br/>• avgSessionDuration<br/>• bounceRate (%)"]
+    end
+
+    subgraph INTEL["💡 INTELLIGENCE & ALERTS"]
+        Insight["<b>Insight</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId, userId<br/>━━━━━━━━━━━━━━<br/>• title, description<br/>• type: InsightType<br/>• priority: Priority<br/>• isActive, isRead<br/>━━━━━━━━━━━━━━<br/>Actionable:<br/>• impact (high/med/low)<br/>• savingsPotential<br/>• conditions (JSON)<br/>• actions (JSON)<br/>━━━━━━━━━━━━━━<br/>• expiresAt"]
+        
+        Alert["<b>Alert</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: projectId<br/>━━━━━━━━━━━━━━<br/>Configuration:<br/>• name, description<br/>• condition (JSON)<br/>• threshold (Decimal)<br/>• isActive<br/>━━━━━━━━━━━━━━<br/>Notifications:<br/>• notifyEmail<br/>• notifySlack<br/>• notifyWebhook<br/>━━━━━━━━━━━━━━<br/>Tracking:<br/>• lastTriggered<br/>• triggerCount"]
+        
+        Webhook["<b>Webhook</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: organizationId<br/>━━━━━━━━━━━━━━<br/>• url, secret<br/>• events (array)<br/>• isActive<br/>━━━━━━━━━━━━━━<br/>Stats:<br/>• lastTriggered<br/>• successCount<br/>• failureCount<br/>━━━━━━━━━━━━━━<br/>Events:<br/>['booking.created',<br/>'cost.threshold',<br/>'alert.triggered']"]
+        
+        Notification["<b>Notification</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: userId<br/>━━━━━━━━━━━━━━<br/>• title, message<br/>• type (info/warning/<br/>  error/success)<br/>• isRead, readAt<br/>• link<br/>━━━━━━━━━━━━━━<br/>In-app notifications<br/>for users"]
+        
+        AuditLog["<b>AuditLog</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: userId, projectId<br/>━━━━━━━━━━━━━━<br/>Event:<br/>• action, resource<br/>• resourceId<br/>• details (JSON)<br/>━━━━━━━━━━━━━━<br/>Context:<br/>• ipAddress<br/>• userAgent<br/>• status (success/fail)<br/>• errorMessage<br/>━━━━━━━━━━━━━━<br/>Compliance & Security"]
+        
+        SearchHistory["<b>SearchHistory</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: userId<br/>━━━━━━━━━━━━━━<br/>• query<br/>• filters (JSON)<br/>• resultCount<br/>━━━━━━━━━━━━━━<br/>Analytics for<br/>user behavior"]
+    end
+
+    subgraph CRM["👥 BOOKING & CRM"]
+        Customer["<b>Customer</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>UK: email<br/>━━━━━━━━━━━━━━<br/>Contact:<br/>• fullName, phone<br/>• company, address<br/>• avatar<br/>━━━━━━━━━━━━━━<br/>Loyalty:<br/>• loyaltyTier<br/>• loyaltyPoints<br/>━━━━━━━━━━━━━━<br/>Stats:<br/>• totalBookings<br/>• totalSpent (Decimal)<br/>• lastVisit<br/>━━━━━━━━━━━━━━<br/>Preferences:<br/>• emailOptIn<br/>• smsOptIn<br/>• marketingOptIn<br/>• preferences (array)<br/>━━━━━━━━━━━━━━<br/>• isActive, isVip<br/>• source, referredBy<br/>• tags, notes"]
+        
+        Booking["<b>Booking</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: customerId<br/>FK: staffAssignedId<br/>FK: createdById<br/>━━━━━━━━━━━━━━<br/>Schedule:<br/>• date, startTime, endTime<br/>• duration (minutes)<br/>• people<br/>━━━━━━━━━━━━━━<br/>Service:<br/>• serviceType, serviceName<br/>• occasion, location<br/>• specialRequests<br/>━━━━━━━━━━━━━━<br/>Status:<br/>• status: BookingStatus<br/>• priority: Priority<br/>• paymentStatus<br/>━━━━━━━━━━━━━━<br/>Financial (Decimal 10,2):<br/>• price, deposit<br/>• discountAmount<br/>• discountCode<br/>• paymentMethod<br/>• currency<br/>━━━━━━━━━━━━━━<br/>Feedback:<br/>• rating (1-5)<br/>• feedback (text)<br/>━━━━━━━━━━━━━━<br/>Automation:<br/>• reminderSent<br/>• confirmationSent<br/>━━━━━━━━━━━━━━<br/>• source, tags<br/>• deletedAt (soft delete)"]
+        
+        CustomerNote["<b>CustomerNote</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: customerId<br/>FK: createdById<br/>━━━━━━━━━━━━━━<br/>• content (text)<br/>• isInternal<br/>• priority<br/>• tags (array)<br/>• attachments (array)<br/>━━━━━━━━━━━━━━<br/>Track customer<br/>interactions & history"]
+        
+        BookingNote["<b>BookingNote</b><br/>━━━━━━━━━━━━━━<br/>PK: id<br/>FK: bookingId<br/>FK: createdById<br/>━━━━━━━━━━━━━━<br/>• content (text)<br/>• isInternal (default)<br/>• priority<br/>• tags (array)<br/>• attachments (array)<br/>━━━━━━━━━━━━━━<br/>Internal notes for<br/>staff coordination"]
+    end
+
+    %% Authentication Relationships
+    User -->|"1:N CASCADE"| Session
+    User -->|"1:N CASCADE"| Account
+    
+    %% Organization Relationships
+    User -->|"1:N CASCADE"| OrgMember
+    OrgMember -->|"N:1 CASCADE"| Organization
+    Organization -->|"1:N CASCADE"| CustomRole
+    OrgMember -->|"N:1 SET_NULL"| CustomRole
+    Organization -->|"1:N CASCADE"| Project
+    Organization -->|"1:N CASCADE"| Webhook
+    
+    %% API Relationships
+    User -->|"1:N CASCADE"| ApiKey
+    Organization -->|"1:N CASCADE"| ApiKey
+    Project -->|"1:N CASCADE"| ApiKey
+    
+    %% Metrics Relationships
+    Project -->|"1:N CASCADE"| UsageMetric
+    AiModel -->|"1:N CASCADE"| UsageMetric
+    ApiKey -->|"1:N SET_NULL"| UsageMetric
+    
+    Project -->|"1:N CASCADE"| CostRecord
+    AiModel -->|"1:N CASCADE"| CostRecord
+    
+    Project -->|"1:N CASCADE"| PlatformPerf
+    Project -->|"1:N CASCADE"| ClientActivity
+    
+    %% Intelligence Relationships
+    Project -->|"1:N CASCADE"| Insight
+    User -->|"1:N SET_NULL"| Insight
+    
+    Project -->|"1:N CASCADE"| Alert
+    
+    User -->|"1:N CASCADE"| Notification
+    User -->|"1:N CASCADE"| SearchHistory
+    
+    User -->|"1:N SET_NULL"| AuditLog
+    Project -->|"1:N CASCADE"| AuditLog
+    
+    %% CRM Relationships
+    Customer -->|"1:N CASCADE"| Booking
+    User -->|"1:N CASCADE"| Booking
+    User -->|"1:N SET_NULL"| Booking
+    
+    Customer -->|"1:N CASCADE"| CustomerNote
+    User -->|"1:N CASCADE"| CustomerNote
+    
+    Booking -->|"1:N CASCADE"| BookingNote
+    User -->|"1:N CASCADE"| BookingNote
+    
+    %% Styling
+    classDef authStyle fill:#e1f5ff,stroke:#01579b,stroke-width:3px,color:#000
+    classDef orgStyle fill:#f3e5f5,stroke:#4a148c,stroke-width:3px,color:#000
+    classDef apiStyle fill:#fff3e0,stroke:#e65100,stroke-width:3px,color:#000
+    classDef metricsStyle fill:#e8f5e9,stroke:#1b5e20,stroke-width:3px,color:#000
+    classDef intelStyle fill:#fff9c4,stroke:#f57f17,stroke-width:3px,color:#000
+    classDef crmStyle fill:#fce4ec,stroke:#880e4f,stroke-width:3px,color:#000
+    
+    class User,Session,Account,Verification authStyle
+    class Organization,CustomRole,OrgMember,Project orgStyle
+    class ApiKey,AiModel apiStyle
+    class UsageMetric,CostRecord,PlatformPerf,ClientActivity metricsStyle
+    class Insight,Alert,Webhook,Notification,AuditLog,SearchHistory intelStyle
+    class Customer,Booking,CustomerNote,BookingNote crmStyle

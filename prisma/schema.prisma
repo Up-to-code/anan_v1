@@ -8,6 +8,10 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
+generator dbml {
+  provider = "prisma-dbml-generator"
+}
+
 // ============================================
 // COMMON ENUMS
 // ============================================
@@ -24,6 +28,7 @@ enum OrganizationRole {
   ADMIN
   MEMBER
   VIEWER
+  CUSTOM
 }
 
 enum PlanType {
@@ -37,6 +42,7 @@ enum Period {
   DAILY
   WEEKLY
   MONTHLY
+  YEARLY
 }
 
 enum InsightType {
@@ -48,6 +54,7 @@ enum InsightType {
 }
 
 enum Priority {
+  NORMAL
   LOW
   MEDIUM
   HIGH
@@ -59,6 +66,7 @@ enum LoyaltyTier {
   SILVER
   GOLD
   PLATINUM
+  DIAMOND
 }
 
 enum BookingStatus {
@@ -67,6 +75,7 @@ enum BookingStatus {
   CANCELLED
   COMPLETED
   NO_SHOW
+  RESCHEDULED
 }
 
 enum BookingSource {
@@ -75,6 +84,26 @@ enum BookingSource {
   WALK_IN
   REFERRAL
   SOCIAL
+  MOBILE_APP
+  EMAIL
+}
+
+enum PaymentStatus {
+  UNPAID
+  PARTIALLY_PAID
+  PAID
+  REFUNDED
+  FAILED
+}
+
+enum PaymentMethod {
+  CASH
+  CREDIT_CARD
+  DEBIT_CARD
+  BANK_TRANSFER
+  PAYPAL
+  STRIPE
+  OTHER
 }
 
 // ============================================
@@ -87,8 +116,11 @@ model User {
   email         String    @unique
   emailVerified Boolean   @default(false)
   image         String?
+  isActive      Boolean   @default(true)
+  lastLoginAt   DateTime?
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
+  deletedAt     DateTime? // Soft delete
   
   // Authentication relations
   sessions      Session[]
@@ -101,6 +133,7 @@ model User {
   auditLogs     AuditLog[]
   searchHistory SearchHistory[]
   insights      Insight[]
+  notifications Notification[]
   
   // Booking CRM relations
   createdBookings Booking[] @relation("BookingCreatedBy")
@@ -108,7 +141,10 @@ model User {
   customerNotes  CustomerNote[]
   bookingNotes   BookingNote[]
 
-  @@index([name, email])
+  @@index([email])
+  @@index([isActive])
+  @@index([createdAt])
+  @@index([deletedAt])
   @@map("users")
 }
 
@@ -119,10 +155,13 @@ model Session {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   ipAddress String?
-  userAgent String?
+  userAgent String?  @db.Text
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([token])
   @@map("sessions")
 }
 
@@ -132,9 +171,9 @@ model Account {
   providerId            String
   userId                String
   user                  User      @relation(fields: [userId], references: [id], onDelete: Cascade)
-  accessToken           String?
-  refreshToken          String?
-  idToken               String?
+  accessToken           String?   @db.Text
+  refreshToken          String?   @db.Text
+  idToken               String?   @db.Text
   accessTokenExpiresAt  DateTime?
   refreshTokenExpiresAt DateTime?
   scope                 String?
@@ -142,6 +181,8 @@ model Account {
   createdAt             DateTime  @default(now())
   updatedAt             DateTime  @updatedAt
 
+  @@unique([providerId, accountId])
+  @@index([userId])
   @@map("accounts")
 }
 
@@ -151,8 +192,11 @@ model Verification {
   value      String
   expiresAt  DateTime
   createdAt  DateTime @default(now())
-  updatedAt  DateTime @default(now()) @updatedAt
+  updatedAt  DateTime @updatedAt
 
+  @@unique([identifier, value])
+  @@index([expiresAt])
+  @@index([identifier])
   @@map("verifications")
 }
 
@@ -166,22 +210,68 @@ model Organization {
   slug        String   @unique
   plan        PlanType @default(STARTER)
   isActive    Boolean  @default(true)
+  
+  // Billing information
+  billingEmail String?
+  maxProjects  Int      @default(3)
+  maxMembers   Int      @default(5)
+  maxApiKeys   Int      @default(10)
+  
+  // Contact info
+  website      String?
+  phone        String?
+  address      String?  @db.Text
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
+  deletedAt   DateTime? // Soft delete
   
   // Relations
   members     OrganizationMember[]
   projects    Project[]
   apiKeys     ApiKey[]
+  roles       CustomRole[]
+  webhooks    Webhook[]
   
-  @@index([name, slug])
+  @@index([slug])
+  @@index([isActive, plan])
+  @@index([deletedAt])
   @@map("organizations")
+}
+
+model CustomRole {
+  id             String   @id @default(cuid())
+  name           String
+  description    String?  @db.Text
+  permissions    Json     @default("{}")
+  isActive       Boolean  @default(true)
+  isDefault      Boolean  @default(false)
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  members        OrganizationMember[]
+  
+  @@unique([organizationId, name])
+  @@index([organizationId, isActive])
+  @@map("custom_roles")
 }
 
 model OrganizationMember {
   id             String   @id @default(cuid())
   role           OrganizationRole @default(MEMBER)
   joinedAt       DateTime @default(now())
+  isActive       Boolean  @default(true)
+  
+  // Custom role support
+  customRoleId   String?
+  customRole     CustomRole? @relation(fields: [customRoleId], references: [id], onDelete: SetNull)
+  
+  // Invitation tracking
+  invitedBy      String?
+  invitedAt      DateTime?
   
   // Relations
   userId         String
@@ -190,16 +280,28 @@ model OrganizationMember {
   organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
   
   @@unique([userId, organizationId])
+  @@index([organizationId, isActive])
+  @@index([customRoleId])
+  @@index([userId])
   @@map("organization_members")
 }
 
 model Project {
   id             String   @id @default(cuid())
   name           String
-  description    String?
+  description    String?  @db.Text
   isActive       Boolean  @default(true)
+  
+  // Project settings
+  timezone       String   @default("UTC")
+  alertsEnabled  Boolean  @default(true)
+  
+  // Environment
+  environment    String   @default("production") // production, staging, development
+  
   createdAt      DateTime @default(now())
   updatedAt      DateTime @updatedAt
+  deletedAt      DateTime? // Soft delete
   
   // Relations
   organizationId String
@@ -211,9 +313,12 @@ model Project {
   platformPerformance PlatformPerformance[]
   insights       Insight[]
   auditLogs      AuditLog[]
+  alerts         Alert[]
 
-  @@index([name, organizationId])
+  @@index([organizationId, isActive])
   @@index([createdAt])
+  @@index([deletedAt])
+  @@index([environment])
   @@map("projects")
 }
 
@@ -222,12 +327,15 @@ model ApiKey {
   name           String
   key            String   @unique
   prefix         String
-  permissions    Json
+  permissions    Json     @default("[]")
   rateLimit      Int      @default(1000)
   isActive       Boolean  @default(true)
   lastUsed       DateTime?
   expiresAt      DateTime?
   createdAt      DateTime @default(now())
+  
+  // IP whitelist
+  allowedIps     String[] @default([])
   
   // Relations
   userId         String
@@ -238,6 +346,10 @@ model ApiKey {
   project        Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   usageMetrics   UsageMetric[]
   
+  @@index([organizationId, isActive])
+  @@index([userId])
+  @@index([expiresAt])
+  @@index([key])
   @@map("api_keys")
 }
 
@@ -248,8 +360,15 @@ model AiModel {
   modelFamily String
   contextSize Int
   isActive    Boolean  @default(true)
-  costPer1kTokens Float
-  capabilities Json
+  
+  // Pricing
+  costPer1kInputTokens  Decimal @db.Decimal(10, 6)
+  costPer1kOutputTokens Decimal @db.Decimal(10, 6)
+  
+  // Features
+  capabilities Json    @default("{}")
+  maxTokens    Int?
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -257,6 +376,9 @@ model AiModel {
   usageMetrics UsageMetric[]
   costRecords  CostRecord[]
   
+  @@index([provider, isActive])
+  @@index([modelFamily])
+  @@index([name])
   @@map("ai_models")
 }
 
@@ -265,18 +387,28 @@ model UsageMetric {
   timestamp   DateTime @default(now())
   period      Period   @default(HOURLY)
   
-  // Metrics
+  // Token metrics
   tokenCount  Int
   promptTokens Int
   completionTokens Int
+  
+  // Request metrics
   requestCount Int
   userCount   Int
-  cost        Float
+  cost        Decimal  @db.Decimal(10, 4)
+  
+  // Performance metrics
+  avgLatency  Int?     // milliseconds
+  p95Latency  Int?     // milliseconds
+  p99Latency  Int?     // milliseconds
+  errorCount  Int      @default(0)
+  successRate Decimal? @db.Decimal(5, 2) // percentage
   
   // Metadata
   endpoint    String?
   statusCode  Int?
   userId      String?
+  region      String?
   
   // Relations
   projectId   String
@@ -291,8 +423,8 @@ model UsageMetric {
   @@index([projectId, timestamp])
   @@index([modelId, timestamp])
   @@index([apiKeyId, timestamp])
-  @@index([cost])
-  @@index([tokenCount])
+  @@index([period, timestamp])
+  @@index([userId])
   @@map("usage_metrics")
 }
 
@@ -302,13 +434,21 @@ model CostRecord {
   periodType  Period   @default(MONTHLY)
   
   // Cost breakdown
-  developmentCost Float
-  inferenceCost   Float
-  maintenanceCost Float
-  totalCost       Float
+  developmentCost Decimal @db.Decimal(10, 2)
+  inferenceCost   Decimal @db.Decimal(10, 2)
+  maintenanceCost Decimal @db.Decimal(10, 2)
+  totalCost       Decimal @db.Decimal(10, 2)
+  
+  // Budget tracking
+  budgetLimit     Decimal? @db.Decimal(10, 2)
+  budgetUsed      Decimal  @default(0) @db.Decimal(5, 2) // percentage
+  
+  // Forecasting
+  forecastedCost  Decimal? @db.Decimal(10, 2)
   
   // Metadata
-  notes       String?
+  notes       String?  @db.Text
+  currency    String   @default("USD")
   
   // Relations
   projectId   String
@@ -316,8 +456,10 @@ model CostRecord {
   modelId     String
   model       AiModel @relation(fields: [modelId], references: [id], onDelete: Cascade)
   
-  @@unique([projectId, modelId, period])
-  @@index([period])
+  @@unique([projectId, modelId, period, periodType])
+  @@index([period, periodType])
+  @@index([totalCost])
+  @@index([projectId, periodType])
   @@map("cost_records")
 }
 
@@ -325,17 +467,23 @@ model PlatformPerformance {
   id           String   @id @default(cuid())
   timestamp    DateTime @default(now())
   platform     String
-  uptime       Float
-  reliability  Float
-  avgResponseTime Float
-  errorRate    Float
+  uptime       Decimal  @db.Decimal(5, 2) // percentage
+  reliability  Decimal  @db.Decimal(5, 2) // percentage
+  avgResponseTime Decimal @db.Decimal(10, 2) // milliseconds
+  errorRate    Decimal  @db.Decimal(5, 2) // percentage
   rateLimitRemaining Int?
+  
+  // Additional metrics
+  requestsPerSecond Decimal? @db.Decimal(10, 2)
+  concurrentRequests Int?
   
   // Relations
   projectId    String?
   project      Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
   @@index([timestamp, platform])
+  @@index([projectId, timestamp])
+  @@index([platform])
   @@map("platform_performance")
 }
 
@@ -348,26 +496,38 @@ model ClientActivity {
   activeUsers Int
   newUsers    Int
   
+  // Additional metrics
+  returningUsers Int   @default(0)
+  avgSessionDuration Int? // seconds
+  bounceRate     Decimal? @db.Decimal(5, 2) // percentage
+  
   // Relations
   projectId   String
   project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
   
   @@unique([projectId, date, period])
-  @@index([date])
+  @@index([date, period])
+  @@index([projectId, date])
   @@map("client_activity")
 }
 
 model Insight {
   id          String     @id @default(cuid())
   title       String
-  description String
+  description String     @db.Text
   type        InsightType
   priority    Priority   @default(MEDIUM)
   isActive    Boolean    @default(true)
+  isRead      Boolean    @default(false)
+  
+  // Actionable data
+  impact      String?    // high, medium, low
+  savingsPotential Decimal? @db.Decimal(10, 2)
+  
   createdAt   DateTime   @default(now())
   expiresAt   DateTime?
-  conditions  Json
-  actions     Json
+  conditions  Json       @default("{}")
+  actions     Json       @default("[]")
   
   // Relations
   projectId   String?
@@ -375,7 +535,80 @@ model Insight {
   userId      String?
   user        User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
 
+  @@index([projectId, isActive, isRead])
+  @@index([priority, createdAt])
+  @@index([type, isActive])
   @@map("insights")
+}
+
+model Alert {
+  id          String   @id @default(cuid())
+  name        String
+  description String?  @db.Text
+  condition   Json     // Alert conditions
+  threshold   Decimal? @db.Decimal(10, 2)
+  isActive    Boolean  @default(true)
+  
+  // Notification settings
+  notifyEmail Boolean  @default(true)
+  notifySlack Boolean  @default(false)
+  notifyWebhook Boolean @default(false)
+  
+  lastTriggered DateTime?
+  triggerCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  projectId   String
+  project     Project @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  
+  @@index([projectId, isActive])
+  @@index([lastTriggered])
+  @@map("alerts")
+}
+
+model Webhook {
+  id          String   @id @default(cuid())
+  url         String
+  events      String[] // Array of event types
+  secret      String?
+  isActive    Boolean  @default(true)
+  
+  lastTriggered DateTime?
+  successCount  Int      @default(0)
+  failureCount  Int      @default(0)
+  
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  organizationId String
+  organization   Organization @relation(fields: [organizationId], references: [id], onDelete: Cascade)
+  
+  @@index([organizationId, isActive])
+  @@map("webhooks")
+}
+
+model Notification {
+  id          String   @id @default(cuid())
+  title       String
+  message     String   @db.Text
+  type        String   // info, warning, error, success
+  isRead      Boolean  @default(false)
+  link        String?
+  
+  createdAt   DateTime @default(now())
+  readAt      DateTime?
+  
+  // Relations
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  
+  @@index([userId, isRead])
+  @@index([createdAt])
+  @@map("notifications")
 }
 
 model SearchHistory {
@@ -387,8 +620,8 @@ model SearchHistory {
   user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
   createdAt   DateTime @default(now())
   
-  @@index([query, userId])
-  @@index([createdAt])
+  @@index([userId, createdAt])
+  @@index([query])
   @@map("search_history")
 }
 
@@ -399,8 +632,12 @@ model AuditLog {
   resourceId  String?
   details     Json?
   ipAddress   String?
-  userAgent   String?
+  userAgent   String?  @db.Text
   timestamp   DateTime @default(now())
+  
+  // Additional context
+  status      String?  // success, failure
+  errorMessage String? @db.Text
   
   // Relations
   userId      String?
@@ -409,7 +646,10 @@ model AuditLog {
   project     Project? @relation(fields: [projectId], references: [id], onDelete: Cascade)
 
   @@index([timestamp])
-  @@index([action, timestamp])
+  @@index([userId, timestamp])
+  @@index([projectId, timestamp])
+  @@index([action, resource, timestamp])
+  @@index([status])
   @@map("audit_logs")
 }
 
@@ -420,55 +660,108 @@ model AuditLog {
 model Customer {
   id           String   @id @default(cuid())
   fullName     String
-  email        String
+  email        String   @unique
   phone        String
   company      String?
-  address      String?
-  notes        String?
+  address      String?  @db.Text
+  notes        String?  @db.Text
   avatar       String?
+  
+  // Loyalty program
   loyaltyTier  LoyaltyTier?
+  loyaltyPoints Int     @default(0)
+  
+  // Stats
   totalBookings Int     @default(0)
-  totalSpent   Float    @default(0)
+  totalSpent   Decimal  @default(0) @db.Decimal(10, 2)
   lastVisit    DateTime?
   preferences  String[]
+  
+  // Contact preferences
+  emailOptIn   Boolean  @default(true)
+  smsOptIn     Boolean  @default(false)
+  marketingOptIn Boolean @default(false)
+  
+  // Status
+  isActive     Boolean  @default(true)
+  isVip        Boolean  @default(false)
+  
+  // Metadata
+  source       String?
+  referredBy   String?
+  tags         String[]
+  
   createdAt    DateTime @default(now())
   updatedAt    DateTime @updatedAt
+  deletedAt    DateTime? // Soft delete
   
   // Relations
   bookings     Booking[]
-  notes        CustomerNote[]
+  customerNotes        CustomerNote[]
   
-  @@index([fullName])
   @@index([email])
   @@index([phone])
-  @@index([loyaltyTier])
-  @@index([createdAt])
+  @@index([fullName])
+  @@index([loyaltyTier, totalSpent])
+  @@index([isActive, lastVisit])
+  @@index([deletedAt])
+  @@index([isVip])
   @@map("customers")
 }
 
 model Booking {
   id              String        @id @default(cuid())
+  
+  // Scheduling
   date            DateTime
   startTime       String
   endTime         String
-  duration        Int
+  duration        Int           // minutes
   people          Int
+  
+  // Service details
   serviceType     String
+  serviceName     String?
   occasion        String?
-  specialRequests String?
+  specialRequests String?       @db.Text
   location        String?
+  
+  // Status and priority
   status          BookingStatus @default(PENDING)
   priority        Priority      @default(NORMAL)
-  price           Float?
-  deposit         Float?
-  notes           String?
+  
+  // Financial
+  price           Decimal?      @db.Decimal(10, 2)
+  deposit         Decimal?      @db.Decimal(10, 2)
+  paymentStatus   PaymentStatus @default(UNPAID)
+  paymentMethod   PaymentMethod?
+  currency        String        @default("USD")
+  
+  // Discount
+  discountAmount  Decimal?      @db.Decimal(10, 2)
+  discountCode    String?
+  
+  // Feedback
+  rating          Int?          // 1-5 stars
+  feedback        String?       @db.Text
+  
+  // Metadata
+  notes           String?       @db.Text
   notesCount      Int           @default(0)
-  rating          Int?
-  feedback        String?
   source          BookingSource @default(WEBSITE)
   tags            String[]
+  
+  // Reminders
+  reminderSent    Boolean       @default(false)
+  reminderSentAt  DateTime?
+  confirmationSent Boolean      @default(false)
+  
+  // Timestamps
   createdAt       DateTime      @default(now())
   updatedAt       DateTime      @updatedAt
+  cancelledAt     DateTime?
+  completedAt     DateTime?
+  deletedAt       DateTime?     // Soft delete
   
   // Relations
   customerId      String
@@ -479,21 +772,27 @@ model Booking {
   createdBy       User          @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
   bookingNotes    BookingNote[]
   
-  @@index([date])
-  @@index([status])
-  @@index([customerId])
-  @@index([staffAssignedId])
-  @@index([createdById])
-  @@index([serviceType])
+  @@index([date, status])
+  @@index([customerId, date])
+  @@index([staffAssignedId, date])
+  @@index([status, createdAt])
+  @@index([serviceType, date])
+  @@index([source])
+  @@index([paymentStatus])
+  @@index([deletedAt])
   @@map("bookings")
 }
 
 model CustomerNote {
   id          String   @id @default(cuid())
-  content     String
+  content     String   @db.Text
   isInternal  Boolean  @default(false)
   priority    Priority @default(NORMAL)
   tags        String[]
+  
+  // Attachments
+  attachments String[] @default([])
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -503,17 +802,22 @@ model CustomerNote {
   createdById String
   createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
   
-  @@index([customerId])
-  @@index([createdAt])
+  @@index([customerId, createdAt])
+  @@index([createdById])
+  @@index([priority])
   @@map("customer_notes")
 }
 
 model BookingNote {
   id          String   @id @default(cuid())
-  content     String
+  content     String   @db.Text
   isInternal  Boolean  @default(true)
   priority    Priority @default(NORMAL)
   tags        String[]
+  
+  // Attachments
+  attachments String[] @default([])
+  
   createdAt   DateTime @default(now())
   updatedAt   DateTime @updatedAt
   
@@ -523,7 +827,8 @@ model BookingNote {
   createdById String
   createdBy   User    @relation(fields: [createdById], references: [id], onDelete: Cascade)
   
-  @@index([bookingId])
-  @@index([createdAt])
+  @@index([bookingId, createdAt])
+  @@index([createdById])
+  @@index([priority])
   @@map("booking_notes")
 }
