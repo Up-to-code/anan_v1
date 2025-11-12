@@ -9,6 +9,75 @@ datasource db {
 }
 
 // ============================================
+// COMMON ENUMS
+// ============================================
+
+enum UserRole {
+  SUPER_ADMIN
+  ADMIN
+  EDITOR
+  VIEWER
+}
+
+enum OrganizationRole {
+  OWNER
+  ADMIN
+  MEMBER
+  VIEWER
+}
+
+enum PlanType {
+  STARTER
+  PROFESSIONAL
+  ENTERPRISE
+}
+
+enum Period {
+  HOURLY
+  DAILY
+  WEEKLY
+  MONTHLY
+}
+
+enum InsightType {
+  COST_OPTIMIZATION
+  PERFORMANCE
+  USAGE_PATTERN
+  SECURITY
+  RELIABILITY
+}
+
+enum Priority {
+  LOW
+  MEDIUM
+  HIGH
+  CRITICAL
+}
+
+enum LoyaltyTier {
+  BRONZE
+  SILVER
+  GOLD
+  PLATINUM
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  COMPLETED
+  NO_SHOW
+}
+
+enum BookingSource {
+  WEBSITE
+  PHONE
+  WALK_IN
+  REFERRAL
+  SOCIAL
+}
+
+// ============================================
 // AUTHENTICATION MODELS 
 // ============================================
 
@@ -31,7 +100,13 @@ model User {
   apiKeys       ApiKey[]
   auditLogs     AuditLog[]
   searchHistory SearchHistory[]
-  insights      Insight[] // Add missing back relation for Insight
+  insights      Insight[]
+  
+  // Booking CRM relations
+  createdBookings Booking[] @relation("BookingCreatedBy")
+  assignedBookings Booking[] @relation("BookingAssignedTo")
+  customerNotes  CustomerNote[]
+  bookingNotes   BookingNote[]
 
   @@index([name, email])
   @@map("users")
@@ -85,13 +160,6 @@ model Verification {
 // ANALYTICS DASHBOARD MODELS
 // ============================================
 
-enum UserRole {
-  SUPER_ADMIN
-  ADMIN
-  EDITOR
-  VIEWER
-}
-
 model Organization {
   id          String   @id @default(cuid())
   name        String
@@ -125,19 +193,6 @@ model OrganizationMember {
   @@map("organization_members")
 }
 
-enum OrganizationRole {
-  OWNER
-  ADMIN
-  MEMBER
-  VIEWER
-}
-
-enum PlanType {
-  STARTER
-  PROFESSIONAL
-  ENTERPRISE
-}
-
 model Project {
   id             String   @id @default(cuid())
   name           String
@@ -155,7 +210,7 @@ model Project {
   clientActivity ClientActivity[]
   platformPerformance PlatformPerformance[]
   insights       Insight[]
-  auditLogs      AuditLog[] // Add missing back relation for AuditLog
+  auditLogs      AuditLog[]
 
   @@index([name, organizationId])
   @@index([createdAt])
@@ -241,13 +296,6 @@ model UsageMetric {
   @@map("usage_metrics")
 }
 
-enum Period {
-  HOURLY
-  DAILY
-  WEEKLY
-  MONTHLY
-}
-
 model CostRecord {
   id          String   @id @default(cuid())
   period      DateTime
@@ -330,21 +378,6 @@ model Insight {
   @@map("insights")
 }
 
-enum InsightType {
-  COST_OPTIMIZATION
-  PERFORMANCE
-  USAGE_PATTERN
-  SECURITY
-  RELIABILITY
-}
-
-enum Priority {
-  LOW
-  MEDIUM
-  HIGH
-  CRITICAL
-}
-
 model SearchHistory {
   id          String   @id @default(cuid())
   query       String
@@ -378,4 +411,119 @@ model AuditLog {
   @@index([timestamp])
   @@index([action, timestamp])
   @@map("audit_logs")
+}
+
+// ============================================
+// BOOKING CRM MODELS
+// ============================================
+
+model Customer {
+  id           String   @id @default(cuid())
+  fullName     String
+  email        String
+  phone        String
+  company      String?
+  address      String?
+  notes        String?
+  avatar       String?
+  loyaltyTier  LoyaltyTier?
+  totalBookings Int     @default(0)
+  totalSpent   Float    @default(0)
+  lastVisit    DateTime?
+  preferences  String[]
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+  
+  // Relations
+  bookings     Booking[]
+  notes        CustomerNote[]
+  
+  @@index([fullName])
+  @@index([email])
+  @@index([phone])
+  @@index([loyaltyTier])
+  @@index([createdAt])
+  @@map("customers")
+}
+
+model Booking {
+  id              String        @id @default(cuid())
+  date            DateTime
+  startTime       String
+  endTime         String
+  duration        Int
+  people          Int
+  serviceType     String
+  occasion        String?
+  specialRequests String?
+  location        String?
+  status          BookingStatus @default(PENDING)
+  priority        Priority      @default(NORMAL)
+  price           Float?
+  deposit         Float?
+  notes           String?
+  notesCount      Int           @default(0)
+  rating          Int?
+  feedback        String?
+  source          BookingSource @default(WEBSITE)
+  tags            String[]
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+  
+  // Relations
+  customerId      String
+  customer        Customer      @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  staffAssignedId String?
+  staffAssigned   User?         @relation("BookingAssignedTo", fields: [staffAssignedId], references: [id], onDelete: SetNull)
+  createdById     String
+  createdBy       User          @relation("BookingCreatedBy", fields: [createdById], references: [id], onDelete: Cascade)
+  bookingNotes    BookingNote[]
+  
+  @@index([date])
+  @@index([status])
+  @@index([customerId])
+  @@index([staffAssignedId])
+  @@index([createdById])
+  @@index([serviceType])
+  @@map("bookings")
+}
+
+model CustomerNote {
+  id          String   @id @default(cuid())
+  content     String
+  isInternal  Boolean  @default(false)
+  priority    Priority @default(NORMAL)
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  customerId  String
+  customer    Customer @relation(fields: [customerId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User     @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  
+  @@index([customerId])
+  @@index([createdAt])
+  @@map("customer_notes")
+}
+
+model BookingNote {
+  id          String   @id @default(cuid())
+  content     String
+  isInternal  Boolean  @default(true)
+  priority    Priority @default(NORMAL)
+  tags        String[]
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+  
+  // Relations
+  bookingId   String
+  booking     Booking @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+  createdById String
+  createdBy   User    @relation(fields: [createdById], references: [id], onDelete: Cascade)
+  
+  @@index([bookingId])
+  @@index([createdAt])
+  @@map("booking_notes")
 }
