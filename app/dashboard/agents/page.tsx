@@ -545,7 +545,7 @@ const AgentsPage = () => {
     setToast({ message: "Agent started successfully", type: "success" });
   };
 
-  const handleCreateAgent = () => router.push("dashboard/agents/create-agent");
+  const handleCreateAgent = () => router.push("agents/create-agent");
   const handleImport = () => setToast({ message: "Import feature coming soon", type: "info" });
 
   const filteredAgents = agents.filter((agent) =>

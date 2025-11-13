@@ -4,20 +4,32 @@ import React, { useEffect, useState } from 'react';
 const SIDEBAR_ITEMS = 6;
 const CONTENT_BLOCKS = 5;
 
-const getNavItemWidths = () =>
-  Array.from({ length: SIDEBAR_ITEMS }, () => 60 + Math.random() * 40);
+// Utility to create a random "percentage" between min% and max%, used for skeleton block widths
+const createRandomPercentArray = (length: number, min: number, max: number) => {
+  return Array.from({ length }, () => min + Math.random() * (max - min));
+};
 
-const getContentBlockWidths = () =>
-  Array.from({ length: CONTENT_BLOCKS }, () => 70 + Math.random() * 30);
+const getNavItemWidths = () => createRandomPercentArray(SIDEBAR_ITEMS, 60, 100); // px
+const getContentBlockWidths = () => createRandomPercentArray(CONTENT_BLOCKS, 70, 100); // percent
+const getAdditionalBlockWidths = () => createRandomPercentArray(4, 80, 100); // percent
+const getTableCellWidths = () => createRandomPercentArray(4, 60, 100); // percent
 
 const Loading: React.FC = () => {
   const [navItemWidths, setNavItemWidths] = useState<number[]>(() => Array(SIDEBAR_ITEMS).fill(80));
   const [contentBlockWidths, setContentBlockWidths] = useState<number[]>(() => Array(CONTENT_BLOCKS).fill(90));
+  const [additionalBlocks, setAdditionalBlocks] = useState<number[][]>(() =>
+    Array.from({ length: 2 }, () => Array(4).fill(90))
+  );
+  const [tableCellWidths, setTableCellWidths] = useState<number[][]>(() =>
+    Array.from({ length: 5 }, () => Array(4).fill(80))
+  );
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
     setNavItemWidths(getNavItemWidths());
     setContentBlockWidths(getContentBlockWidths());
+    setAdditionalBlocks(Array.from({ length: 2 }, () => getAdditionalBlockWidths()));
+    setTableCellWidths(Array.from({ length: 5 }, () => getTableCellWidths()));
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -178,15 +190,15 @@ const Loading: React.FC = () => {
 
               {/* Additional Content Blocks for Full Page Effect */}
               <div className="mt-6 grid grid-cols-1 lg:grid-cols-2 gap-6">
-                {Array.from({ length: 2 }, (_, i) => (
+                {additionalBlocks.map((block, i) => (
                   <div key={i} className="bg-white rounded-xl border border-slate-200 p-6 animate-pulse">
                     <div className="h-6 bg-slate-200 rounded w-32 mb-4"></div>
                     <div className="space-y-3">
-                      {Array.from({ length: 4 }, (_, j) => (
+                      {block.map((width, j) => (
                         <div
                           key={j}
                           className="h-4 bg-slate-200 rounded"
-                          style={{ width: `${80 + Math.random() * 20}%` }}
+                          style={{ width: `${width}%` }}
                         ></div>
                       ))}
                     </div>
@@ -206,10 +218,10 @@ const Loading: React.FC = () => {
                         ))}
                       </div>
                     </div>
-                    {Array.from({ length: 5 }, (_, i) => (
+                    {tableCellWidths.map((row, i) => (
                       <div key={i} className="grid grid-cols-4 gap-4 py-3 border-b border-slate-100 last:border-0">
-                        {Array.from({ length: 4 }, (_, j) => (
-                          <div key={j} className="h-4 bg-slate-200 rounded" style={{ width: `${60 + Math.random() * 40}%` }}></div>
+                        {row.map((width, j) => (
+                          <div key={j} className="h-4 bg-slate-200 rounded" style={{ width: `${width}%` }}></div>
                         ))}
                       </div>
                     ))}

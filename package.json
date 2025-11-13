@@ -31,7 +31,8 @@
     "react-easy-crop": "^5.5.3",
     "recharts": "2.15.4",
     "tailwind-merge": "^3.3.1",
-    "uploadthing": "^7.7.4"
+    "uploadthing": "^7.7.4",
+    "zustand": "^5.0.8"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
