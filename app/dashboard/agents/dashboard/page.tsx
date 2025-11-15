@@ -585,7 +585,7 @@ export default function YANSDashboard() {
   const [editingQA, setEditingQA] = useState<number | null>(null);
   const [newQuestion, setNewQuestion] = useState('');
   const [newAnswer, setNewAnswer] = useState('');
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Stats with proper typing
   const stats: StatCardProps[] = [
